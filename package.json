@@ -1,0 +1,76 @@
+{
+  "name": "nexo-ui",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "description": "UI kit de componentes Lit para portal de servicios digitales.",
+  "author": "Ivan Albizu <ivan.albizu@gmail.com>",
+  "license": "UNLICENSED",
+  "homepage": "https://github.com/ivanalbizu/nexo-ui#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ivanalbizu/nexo-ui.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ivanalbizu/nexo-ui/issues"
+  },
+  "keywords": [
+    "lit",
+    "web-components",
+    "ui-kit",
+    "design-system",
+    "storybook",
+    "contentful",
+    "nexo"
+  ],
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./css/tokens.css": "./dist/css/tokens.css",
+    "./css/global.css": "./dist/css/global.css",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "sideEffects": [
+    "**/*.css",
+    "./dist/index.js",
+    "./src/**/*.ts"
+  ],
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build && tsc -p tsconfig.build.json && node -e \"import('node:fs').then(fs=>{fs.mkdirSync('dist/css',{recursive:true});fs.copyFileSync('src/css/tokens.css','dist/css/tokens.css');fs.copyFileSync('src/css/global.css','dist/css/global.css');})\"",
+    "preview": "vite preview",
+    "storybook": "storybook dev -p 6006",
+    "build-storybook": "storybook build",
+    "test": "vitest run --project unit",
+    "test:watch": "vitest --project unit",
+    "test:all": "vitest run"
+  },
+  "dependencies": {
+    "@contentful/rich-text-html-renderer": "^17.2.2",
+    "contentful": "^11.12.0",
+    "lit": "^3.3.2"
+  },
+  "devDependencies": {
+    "typescript": "~6.0.2",
+    "vite": "^8.0.4",
+    "storybook": "^10.3.5",
+    "@storybook/web-components-vite": "^10.3.5",
+    "@chromatic-com/storybook": "^5.1.1",
+    "@storybook/addon-vitest": "^10.3.5",
+    "@storybook/addon-a11y": "^10.3.5",
+    "@storybook/addon-docs": "^10.3.5",
+    "vitest": "^4.1.4",
+    "playwright": "^1.59.1",
+    "@vitest/browser-playwright": "^4.1.4",
+    "@vitest/coverage-v8": "^4.1.4"
+  }
+}

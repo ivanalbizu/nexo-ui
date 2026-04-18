@@ -1,0 +1,36 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Roboto+Mono:wght@400;500&display=swap');
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--nx-font-sans);
+  background-color: var(--nx-color-surface);
+  color: var(--nx-color-text);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Respeta la preferencia del sistema: desactiva transiciones y animaciones.
+   Como los componentes consumen --nx-transition*, con redefinir los tokens
+   a 0s basta para la mayoría; las animaciones globales se cortan también. */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --nx-transition:      0s;
+    --nx-transition-slow: 0s;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}

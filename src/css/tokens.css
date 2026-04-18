@@ -1,0 +1,497 @@
+/* ─── LAYER 1: PRIMITIVOS ───────────────────────────────────────────────────
+   Valores crudos. No se usan directamente en componentes.
+   ─────────────────────────────────────────────────────────────────────────── */
+:root {
+  /* Violet */
+  --nx-prim-violet-50:  #f5f3ff;
+  --nx-prim-violet-100: #ede9fe;
+  --nx-prim-violet-500: #8b5cf6;
+  --nx-prim-violet-600: #7c3aed;
+  --nx-prim-violet-700: #6d28d9;
+  --nx-prim-violet-800: #5b21b6;
+
+  /* Amber */
+  --nx-prim-amber-400: #fbbf24;
+  --nx-prim-amber-500: #f59e0b;
+  --nx-prim-amber-600: #d97706;
+
+  /* Blue */
+  --nx-prim-blue-50:  #eff6ff;
+  --nx-prim-blue-500: #3b82f6;
+  --nx-prim-blue-600: #2563eb;
+  --nx-prim-blue-700: #1d4ed8;
+  --nx-prim-blue-800: #1e40af;
+
+  /* Teal */
+  --nx-prim-teal-400: #2dd4bf;
+  --nx-prim-teal-500: #14b8a6;
+  --nx-prim-teal-600: #0d9488;
+
+  /* Emerald */
+  --nx-prim-emerald-50:  #ecfdf5;
+  --nx-prim-emerald-500: #10b981;
+  --nx-prim-emerald-600: #059669;
+  --nx-prim-emerald-700: #047857;
+
+  /* Pink */
+  --nx-prim-pink-400: #f472b6;
+  --nx-prim-pink-500: #ec4899;
+  --nx-prim-pink-600: #db2777;
+
+  /* Red */
+  --nx-prim-red-50:  #fef2f2;
+  --nx-prim-red-500: #ef4444;
+  --nx-prim-red-600: #dc2626;
+  --nx-prim-red-700: #b91c1c;
+
+  /* Yellow */
+  --nx-prim-yellow-50:  #fefce8;
+  --nx-prim-yellow-500: #eab308;
+
+  /* Slate */
+  --nx-prim-slate-50:  #f8fafc;
+  --nx-prim-slate-100: #f1f5f9;
+  --nx-prim-slate-200: #e2e8f0;
+  --nx-prim-slate-300: #cbd5e1;
+  --nx-prim-slate-400: #94a3b8;
+  --nx-prim-slate-500: #64748b;
+  --nx-prim-slate-700: #334155;
+  --nx-prim-slate-800: #1e293b;
+  --nx-prim-slate-900: #0f172a;
+  --nx-prim-white:     #ffffff;
+}
+
+/* ─── LAYER 2: SEMÁNTICOS (brand-overridable) ───────────────────────────────
+   Significado, no valor. Aquí se hace el theming por marca.
+   ─────────────────────────────────────────────────────────────────────────── */
+:root,
+:root[data-brand="nexo"] {
+  color-scheme: light dark;
+
+  /* Brand identity */
+  --nx-color-primary:        var(--nx-prim-violet-700);
+  --nx-color-primary-hover:  var(--nx-prim-violet-800);
+  --nx-color-primary-subtle: color-mix(in srgb, var(--nx-color-primary) 12%, var(--nx-color-surface));
+  --nx-color-accent:         var(--nx-prim-amber-500);
+  --nx-color-accent-hover:   var(--nx-prim-amber-600);
+
+  /* Surface */
+  --nx-color-surface:        var(--nx-prim-slate-50);
+  --nx-color-surface-alt:    var(--nx-prim-white);
+  --nx-color-surface-raised: var(--nx-prim-white);
+
+  /* Border */
+  --nx-color-border:         var(--nx-prim-slate-200);
+  --nx-color-border-strong:  var(--nx-prim-slate-300);
+
+  /* Text */
+  --nx-color-text:           var(--nx-prim-slate-900);
+  --nx-color-text-muted:     var(--nx-prim-slate-500);
+  --nx-color-text-inverse:   var(--nx-prim-white);
+  --nx-color-text-on-accent: var(--nx-prim-slate-900);
+
+  /* Semantic states — subtle se deriva para adaptarse al tema automáticamente */
+  --nx-color-success:        var(--nx-prim-emerald-600);
+  --nx-color-success-subtle: color-mix(in srgb, var(--nx-color-success) 12%, var(--nx-color-surface));
+  --nx-color-warning:        var(--nx-prim-yellow-500);
+  --nx-color-warning-subtle: color-mix(in srgb, var(--nx-color-warning) 14%, var(--nx-color-surface));
+  --nx-color-error:          var(--nx-prim-red-600);
+  --nx-color-error-subtle:   color-mix(in srgb, var(--nx-color-error) 12%, var(--nx-color-surface));
+  --nx-color-info:           var(--nx-prim-blue-600);
+  --nx-color-info-subtle:    color-mix(in srgb, var(--nx-color-info) 12%, var(--nx-color-surface));
+
+  /* Typography */
+  --nx-font-sans: 'Inter', system-ui, sans-serif;
+  --nx-font-mono: 'Roboto Mono', monospace;
+
+  --nx-text-xs:   0.75rem;
+  --nx-text-sm:   0.8125rem;
+  --nx-text-base: 0.9375rem;
+  --nx-text-lg:   1.0625rem;
+  --nx-text-xl:   1.25rem;
+  --nx-text-2xl:  1.5rem;
+  --nx-text-3xl:  2rem;
+  --nx-text-4xl:  2.5rem;
+
+  --nx-leading-tight:  1.25;
+  --nx-leading-normal: 1.5;
+  --nx-leading-loose:  1.75;
+
+  /* Spacing */
+  --nx-space-1: 0.25rem;
+  --nx-space-2: 0.5rem;
+  --nx-space-3: 0.75rem;
+  --nx-space-4: 1rem;
+  --nx-space-5: 1.25rem;
+  --nx-space-6: 1.5rem;
+  --nx-space-8: 2rem;
+  --nx-space-10: 2.5rem;
+  --nx-space-12: 3rem;
+  --nx-space-16: 4rem;
+
+  /* Border radius */
+  --nx-radius-sm:   4px;
+  --nx-radius-md:   8px;
+  --nx-radius-lg:   12px;
+  --nx-radius-card: 16px;
+  --nx-radius-full: 9999px;
+
+  /* Shadows */
+  --nx-shadow-sm:   0 1px 3px rgba(0,0,0,0.08);
+  --nx-shadow-card: 0 2px 12px rgba(0,0,0,0.08);
+  --nx-shadow-lg:   0 8px 32px rgba(0,0,0,0.12);
+
+  /* Focus ring — unificado */
+  --nx-focus-ring-width:  2px;
+  --nx-focus-ring-offset: 2px;
+  --nx-focus-ring-color:  var(--nx-color-primary);
+  --nx-shadow-focus: 0 0 0 calc(var(--nx-focus-ring-width) + 1px) color-mix(in srgb, var(--nx-focus-ring-color) 30%, transparent);
+
+  /* Motion */
+  --nx-transition:      150ms ease;
+  --nx-transition-slow: 300ms ease;
+
+  /* ─── LAYER 3: COMPONENT TOKENS ──────────────────────────────────────── */
+
+  /* Button */
+  --nx-button-radius:       var(--nx-radius-full);
+  --nx-button-font-weight:  600;
+  --nx-button-letter-spacing: 0;
+
+  /* Badge / Chip */
+  --nx-badge-radius:    var(--nx-radius-full);
+  --nx-chip-radius:     var(--nx-radius-full);
+
+  /* Input */
+  --nx-input-radius:    var(--nx-radius-md);
+  --nx-input-border:    var(--nx-color-border);
+  --nx-input-bg:        var(--nx-color-surface-alt);
+
+  /* Card */
+  --nx-card-radius:     var(--nx-radius-card);
+  --nx-card-padding:    var(--nx-space-6);
+
+  /* Alert */
+  --nx-alert-radius:    var(--nx-radius-md);
+
+  /* Header */
+  --nx-header-bg:       var(--nx-color-surface-alt);
+
+  /* Density (defaults de la marca Nexo — normal) */
+  --nx-button-height-sm:  2rem;
+  --nx-button-height-md:  2.5rem;
+  --nx-button-height-lg:  3rem;
+  --nx-button-px-sm:      var(--nx-space-3);
+  --nx-button-px-md:      var(--nx-space-6);
+  --nx-button-px-lg:      var(--nx-space-8);
+
+  --nx-input-height:      2.75rem;
+  --nx-input-px:          var(--nx-space-4);
+
+  --nx-card-padding:      var(--nx-space-6);
+  --nx-card-gap:          var(--nx-space-4);
+
+  --nx-header-height:     4rem;
+  --nx-header-px:         var(--nx-space-8);
+}
+
+/* ─── BRAND: Corporate ──────────────────────────────────────────────────────
+   Azul institucional, poco redondeado, densidad compacta, tipografía ajustada.
+   ─────────────────────────────────────────────────────────────────────────── */
+:root[data-brand="corporate"] {
+  /* Color */
+  --nx-color-primary:        var(--nx-prim-blue-700);
+  --nx-color-primary-hover:  var(--nx-prim-blue-800);
+  --nx-color-primary-subtle: color-mix(in srgb, var(--nx-color-primary) 12%, var(--nx-color-surface));
+  --nx-color-accent:         var(--nx-prim-teal-500);
+  --nx-color-accent-hover:   var(--nx-prim-teal-600);
+
+  /* Shape propio de la marca (menos redondeado) */
+  --nx-button-radius:         var(--nx-radius-md);
+  --nx-button-letter-spacing: 0.04em;
+  --nx-badge-radius:          var(--nx-radius-sm);
+  --nx-chip-radius:           var(--nx-radius-md);
+  --nx-input-radius:          var(--nx-radius-sm);
+  --nx-card-radius:           var(--nx-radius-md);
+  --nx-alert-radius:          var(--nx-radius-sm);
+
+  /* Density propia de la marca (compacta) */
+  --nx-button-height-sm:  1.75rem;
+  --nx-button-height-md:  2.25rem;
+  --nx-button-height-lg:  2.625rem;
+  --nx-button-px-sm:      var(--nx-space-2);
+  --nx-button-px-md:      var(--nx-space-4);
+  --nx-button-px-lg:      var(--nx-space-6);
+
+  --nx-input-height:      2.5rem;
+  --nx-input-px:          var(--nx-space-3);
+
+  --nx-card-padding:      var(--nx-space-5);
+  --nx-card-gap:          var(--nx-space-3);
+
+  --nx-header-height:     3.5rem;
+  --nx-header-px:         var(--nx-space-6);
+}
+
+/* ─── BRAND: Fresh ──────────────────────────────────────────────────────────
+   Verde esmeralda + rosa, muy redondeado, densidad espaciosa, energético.
+   ─────────────────────────────────────────────────────────────────────────── */
+:root[data-brand="fresh"] {
+  /* Color */
+  --nx-color-primary:        var(--nx-prim-emerald-600);
+  --nx-color-primary-hover:  var(--nx-prim-emerald-700);
+  --nx-color-primary-subtle: color-mix(in srgb, var(--nx-color-primary) 12%, var(--nx-color-surface));
+  --nx-color-accent:         var(--nx-prim-pink-500);
+  --nx-color-accent-hover:   var(--nx-prim-pink-600);
+  --nx-color-text-on-accent: var(--nx-prim-white);
+
+  /* Shape propio de la marca (muy redondeado) */
+  --nx-button-radius:  var(--nx-radius-full);
+  --nx-card-radius:    20px;
+  --nx-focus-ring-color: var(--nx-prim-emerald-500);
+
+  /* Density propia de la marca (espaciosa) */
+  --nx-button-height-sm:  2.25rem;
+  --nx-button-height-md:  2.875rem;
+  --nx-button-height-lg:  3.5rem;
+  --nx-button-px-sm:      var(--nx-space-4);
+  --nx-button-px-md:      var(--nx-space-8);
+  --nx-button-px-lg:      var(--nx-space-10);
+
+  --nx-input-height:      3rem;
+  --nx-input-px:          var(--nx-space-5);
+
+  --nx-card-padding:      var(--nx-space-8);
+  --nx-card-gap:          var(--nx-space-5);
+
+  --nx-header-height:     4.5rem;
+  --nx-header-px:         var(--nx-space-10);
+}
+
+/* ─── BRAND: Editorial ──────────────────────────────────────────────────────
+   Gris grafito + amarillo, sin radios, estética tipo prensa / editorial.
+   ─────────────────────────────────────────────────────────────────────────── */
+:root[data-brand="editorial"] {
+  /* Color */
+  --nx-color-primary:        var(--nx-prim-slate-900);
+  --nx-color-primary-hover:  var(--nx-prim-slate-700);
+  --nx-color-primary-subtle: color-mix(in srgb, var(--nx-color-primary) 12%, var(--nx-color-surface));
+  --nx-color-accent:         var(--nx-prim-yellow-500);
+  --nx-color-accent-hover:   var(--nx-prim-amber-500);
+  --nx-color-text-on-accent: var(--nx-prim-slate-900);
+
+  /* Shape propio: sin radios */
+  --nx-button-radius:         0px;
+  --nx-button-letter-spacing: 0.06em;
+  --nx-badge-radius:          0px;
+  --nx-chip-radius:           0px;
+  --nx-input-radius:          0px;
+  --nx-card-radius:           0px;
+  --nx-alert-radius:          0px;
+
+  /* Density normal, pero con borde más marcado para compensar la falta de radio */
+  --nx-card-border-width:  2px;
+  --nx-input-border-width: 2px;
+
+  /* Sombras más sutiles — la estructura la dan los bordes */
+  --nx-shadow-card: 0 1px 0 var(--nx-prim-slate-900);
+  --nx-shadow-focus: 0 0 0 var(--nx-focus-ring-width) var(--nx-color-primary);
+}
+
+/* ─── LAYER 4: SHAPE (forma — independiente del color) ──────────────────────
+   rounded (default) · sharp · flat
+   Aplica sobre cualquier marca. Solo sobreescribe tokens de radio y sombra.
+   ─────────────────────────────────────────────────────────────────────────── */
+
+:root[data-shape="rounded"] {
+  --nx-button-radius: var(--nx-radius-full);
+  --nx-badge-radius:  var(--nx-radius-full);
+  --nx-chip-radius:   var(--nx-radius-full);
+  --nx-input-radius:  var(--nx-radius-md);
+  --nx-card-radius:   var(--nx-radius-card);
+  --nx-alert-radius:  var(--nx-radius-md);
+}
+
+:root[data-shape="sharp"] {
+  --nx-radius-sm:   0px;
+  --nx-radius-md:   0px;
+  --nx-radius-lg:   0px;
+  --nx-radius-card: 0px;
+  --nx-radius-full: 2px;   /* los pills se aplanan pero no son 0 para no romper badges inline */
+
+  --nx-button-radius: 0px;
+  --nx-badge-radius:  0px;
+  --nx-chip-radius:   0px;
+  --nx-input-radius:  0px;
+  --nx-card-radius:   0px;
+  --nx-alert-radius:  0px;
+}
+
+:root[data-shape="flat"] {
+  --nx-radius-sm:   0px;
+  --nx-radius-md:   0px;
+  --nx-radius-lg:   0px;
+  --nx-radius-card: 0px;
+  --nx-radius-full: 2px;
+
+  --nx-button-radius: 0px;
+  --nx-badge-radius:  0px;
+  --nx-chip-radius:   0px;
+  --nx-input-radius:  0px;
+  --nx-card-radius:   0px;
+  --nx-alert-radius:  0px;
+
+  /* Sin sombras — los bordes dan la estructura */
+  --nx-shadow-sm:   none;
+  --nx-shadow-card: none;
+  --nx-shadow-lg:   none;
+  --nx-shadow-focus:0 0 0 var(--nx-focus-ring-width) var(--nx-color-primary);
+
+  /* Borde más pronunciado para compensar la falta de sombra */
+  --nx-card-border-width:  2px;
+  --nx-input-border-width: 2px;
+}
+
+/* ─── LAYER 5: DENSITY (override opt-in) ────────────────────────────────────
+   Cada marca define su densidad por defecto. Estos selectores sobrescriben
+   solo cuando el usuario fija explícitamente [data-density].
+   ─────────────────────────────────────────────────────────────────────────── */
+
+:root[data-density="normal"] {
+  --nx-button-height-sm:  2rem;
+  --nx-button-height-md:  2.5rem;
+  --nx-button-height-lg:  3rem;
+  --nx-button-px-sm:      var(--nx-space-3);
+  --nx-button-px-md:      var(--nx-space-6);
+  --nx-button-px-lg:      var(--nx-space-8);
+
+  --nx-input-height:      2.75rem;
+  --nx-input-px:          var(--nx-space-4);
+
+  --nx-card-padding:      var(--nx-space-6);
+  --nx-card-gap:          var(--nx-space-4);
+
+  --nx-header-height:     4rem;
+  --nx-header-px:         var(--nx-space-8);
+}
+
+:root[data-density="compact"] {
+  --nx-button-height-sm:  1.75rem;
+  --nx-button-height-md:  2.25rem;
+  --nx-button-height-lg:  2.625rem;
+  --nx-button-px-sm:      var(--nx-space-2);
+  --nx-button-px-md:      var(--nx-space-4);
+  --nx-button-px-lg:      var(--nx-space-6);
+
+  --nx-input-height:      2.25rem;
+  --nx-input-px:          var(--nx-space-3);
+
+  --nx-card-padding:      var(--nx-space-4);
+  --nx-card-gap:          var(--nx-space-3);
+
+  --nx-header-height:     3.25rem;
+  --nx-header-px:         var(--nx-space-6);
+}
+
+:root[data-density="spacious"] {
+  --nx-button-height-sm:  2.25rem;
+  --nx-button-height-md:  3rem;
+  --nx-button-height-lg:  3.75rem;
+  --nx-button-px-sm:      var(--nx-space-4);
+  --nx-button-px-md:      var(--nx-space-8);
+  --nx-button-px-lg:      var(--nx-space-10);
+
+  --nx-input-height:      3.25rem;
+  --nx-input-px:          var(--nx-space-5);
+
+  --nx-card-padding:      var(--nx-space-8);
+  --nx-card-gap:          var(--nx-space-6);
+
+  --nx-header-height:     5rem;
+  --nx-header-px:         var(--nx-space-10);
+}
+
+/* ─── DARK MODE ─────────────────────────────────────────────────────────────
+   Aplica sobre cualquier marca. Sólo sobreescribe tokens de superficie/texto.
+   ─────────────────────────────────────────────────────────────────────────── */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --nx-color-surface:        var(--nx-prim-slate-900);
+    --nx-color-surface-alt:    var(--nx-prim-slate-800);
+    --nx-color-surface-raised: var(--nx-prim-slate-700);
+    --nx-color-border:         var(--nx-prim-slate-700);
+    --nx-color-border-strong:  var(--nx-prim-slate-500);
+    --nx-color-text:           var(--nx-prim-slate-100);
+    --nx-color-text-muted:     var(--nx-prim-slate-400);
+    --nx-input-bg:             var(--nx-prim-slate-800);
+    --nx-header-bg:            var(--nx-prim-slate-800);
+  }
+}
+
+:root[data-theme="dark"] {
+  --nx-color-surface:        var(--nx-prim-slate-900);
+  --nx-color-surface-alt:    var(--nx-prim-slate-800);
+  --nx-color-surface-raised: var(--nx-prim-slate-700);
+  --nx-color-border:         var(--nx-prim-slate-700);
+  --nx-color-border-strong:  var(--nx-prim-slate-500);
+  --nx-color-text:           var(--nx-prim-slate-100);
+  --nx-color-text-muted:     var(--nx-prim-slate-400);
+  --nx-input-bg:             var(--nx-prim-slate-800);
+  --nx-header-bg:            var(--nx-prim-slate-800);
+}
+
+:root[data-theme="light"] {
+  --nx-color-surface:        var(--nx-prim-slate-50);
+  --nx-color-surface-alt:    var(--nx-prim-white);
+  --nx-color-surface-raised: var(--nx-prim-white);
+  --nx-color-border:         var(--nx-prim-slate-200);
+  --nx-color-border-strong:  var(--nx-prim-slate-300);
+  --nx-color-text:           var(--nx-prim-slate-900);
+  --nx-color-text-muted:     var(--nx-prim-slate-500);
+  --nx-input-bg:             var(--nx-prim-white);
+  --nx-header-bg:            var(--nx-prim-white);
+}
+
+/* ─── DARK MODE · ajustes por marca ─────────────────────────────────────────
+   El primary de cada brand está pensado para fondo claro. En oscuro se aclara
+   un paso para mantener contraste. Los *-subtle ya se auto-adaptan vía color-mix.
+   ─────────────────────────────────────────────────────────────────────────── */
+@media (prefers-color-scheme: dark) {
+  :root,
+  :root[data-brand="nexo"] {
+    --nx-color-primary:       var(--nx-prim-violet-500);
+    --nx-color-primary-hover: var(--nx-prim-violet-600);
+  }
+  :root[data-brand="corporate"] {
+    --nx-color-primary:       var(--nx-prim-blue-500);
+    --nx-color-primary-hover: var(--nx-prim-blue-600);
+  }
+  :root[data-brand="fresh"] {
+    --nx-color-primary:       var(--nx-prim-emerald-500);
+    --nx-color-primary-hover: var(--nx-prim-emerald-600);
+  }
+  :root[data-brand="editorial"] {
+    --nx-color-primary:       var(--nx-prim-slate-100);
+    --nx-color-primary-hover: var(--nx-prim-slate-300);
+    --nx-color-text-on-accent:var(--nx-prim-slate-900);
+  }
+}
+
+:root[data-theme="dark"],
+:root[data-theme="dark"][data-brand="nexo"] {
+  --nx-color-primary:       var(--nx-prim-violet-500);
+  --nx-color-primary-hover: var(--nx-prim-violet-600);
+}
+:root[data-theme="dark"][data-brand="corporate"] {
+  --nx-color-primary:       var(--nx-prim-blue-500);
+  --nx-color-primary-hover: var(--nx-prim-blue-600);
+}
+:root[data-theme="dark"][data-brand="fresh"] {
+  --nx-color-primary:       var(--nx-prim-emerald-500);
+  --nx-color-primary-hover: var(--nx-prim-emerald-600);
+}
+:root[data-theme="dark"][data-brand="editorial"] {
+  --nx-color-primary:        var(--nx-prim-slate-100);
+  --nx-color-primary-hover:  var(--nx-prim-slate-300);
+  --nx-color-text-on-accent: var(--nx-prim-slate-900);
+}

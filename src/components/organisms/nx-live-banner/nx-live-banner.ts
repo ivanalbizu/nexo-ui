@@ -37,6 +37,19 @@ export class NxLiveBanner extends LitElement {
       position: relative;
     }
 
+    /* auto-contrast: sobrescribe --nx-color-text-inverse vía contrast-color().
+       Al cambiarlo en el host, cascadea a todos los descendientes (presenters,
+       coupon-box, sub-claim…) que ya consumen ese token, sin tener que
+       modificarlos uno a uno.
+       Limitación: contrast-color() sólo acepta un <color>; si el usuario pone
+       --nx-live-banner-bg con un gradiente/imagen, la declaración es inválida
+       y se cae al fallback blanco. */
+    @supports (color: contrast-color(red)) {
+      :host([auto-contrast]) {
+        --nx-color-text-inverse: contrast-color(var(--nx-live-banner-bg, #0a0a0a));
+      }
+    }
+
     /* ── Wrapper: contenido centrado con un ancho máximo configurable ── */
     /* container-type aquí para que las @container queries respondan al ancho
        del contenido (no al ancho total del host/viewport). */
@@ -139,6 +152,15 @@ export class NxLiveBanner extends LitElement {
   @property({ attribute: 'claim-as'     }) claimAs:    LiveBannerHeading = 'h2';
   /** Etiqueta HTML para el sub-claim. */
   @property({ attribute: 'sub-claim-as' }) subClaimAs: LiveBannerHeading = 'p';
+
+  /**
+   * Cuando es `true`, recalcula `--nx-color-text-inverse` con CSS `contrast-color()`
+   * contra `--nx-live-banner-bg`, y cascadea al contenido (claim, sub-claim,
+   * presenters, coupon). Sólo aplica si el navegador soporta `contrast-color()`
+   * y si `--nx-live-banner-bg` es un color sólido; en caso contrario se
+   * conserva el valor actual como fallback.
+   */
+  @property({ type: Boolean, reflect: true, attribute: 'auto-contrast' }) autoContrast = false;
 
   override updated(changed: Map<string, unknown>) {
     // Las custom properties van al host para que `--nx-live-banner-bg` aplique al

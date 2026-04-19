@@ -17,7 +17,7 @@ type Story = StoryObj<Args>;
 const DARK = 'style="background:#0a0a0a;padding:2rem;display:inline-flex;gap:2rem;"';
 
 export const Default: Story = {
-  args: { name: 'Claudia Colomer', role: 'Creadora de contenido', photo: '', size: 'md' },
+  args: { name: 'Anónimo Uno', role: 'Creadora de contenido', photo: '', size: 'md' },
   render: ({ name, role, photo, size }) => html`
     <div ${DARK}>
       <nx-presenter-avatar name=${name} role=${role} photo=${photo} size=${size}></nx-presenter-avatar>

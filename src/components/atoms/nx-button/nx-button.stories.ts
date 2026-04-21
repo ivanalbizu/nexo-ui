@@ -7,6 +7,7 @@ interface ButtonArgs {
   variant: ButtonVariant;
   size: ButtonSize;
   disabled: boolean;
+  loading: boolean;
   autoContrast: boolean;
   label: string;
   href: string;
@@ -20,6 +21,7 @@ const meta: Meta<ButtonArgs> = {
     size:         { control: 'select', options: ['sm', 'md', 'lg'] },
     href:         { control: 'text' },
     disabled:     { control: 'boolean' },
+    loading:      { control: 'boolean', description: 'Muestra un spinner y deshabilita la interacción.' },
     autoContrast: { control: 'boolean', description: 'Usa CSS `contrast-color()` para calcular el color del texto del variant primary contra `--nx-color-primary`. Sólo aplica en navegadores con soporte; si no, mantiene `--nx-color-text-inverse` como fallback.' },
   },
   parameters: {
@@ -34,43 +36,49 @@ export default meta;
 
 type Story = StoryObj<ButtonArgs>;
 
-const renderButton = ({ variant, size, disabled, autoContrast, label, href }: ButtonArgs) => html`
+const renderButton = ({ variant, size, disabled, loading, autoContrast, label, href }: ButtonArgs) => html`
   <nx-button
     variant=${variant}
     size=${size}
     href=${href || ''}
     ?disabled=${disabled}
+    ?loading=${loading}
     ?auto-contrast=${autoContrast}
   >${label}</nx-button>
 `;
 
 export const Default: Story = {
-  args: { variant: 'primary', size: 'md', disabled: false, autoContrast: false, label: 'Ver tarifas' },
+  args: { variant: 'primary', size: 'md', disabled: false, loading: false, autoContrast: false, label: 'Ver tarifas' },
   render: renderButton,
 };
 
 export const Secondary: Story = {
-  args: { variant: 'secondary', size: 'md', disabled: false, autoContrast: false, label: 'Más información' },
+  args: { variant: 'secondary', size: 'md', disabled: false, loading: false, autoContrast: false, label: 'Más información' },
   render: renderButton,
 };
 
 export const Ghost: Story = {
-  args: { variant: 'ghost', size: 'md', disabled: false, autoContrast: false, label: 'Cancelar' },
+  args: { variant: 'ghost', size: 'md', disabled: false, loading: false, autoContrast: false, label: 'Cancelar' },
   render: renderButton,
 };
 
 export const Small: Story = {
-  args: { variant: 'primary', size: 'sm', disabled: false, autoContrast: false, label: 'Pequeño' },
+  args: { variant: 'primary', size: 'sm', disabled: false, loading: false, autoContrast: false, label: 'Pequeño' },
   render: renderButton,
 };
 
 export const Large: Story = {
-  args: { variant: 'primary', size: 'lg', disabled: false, autoContrast: false, label: 'Botón grande' },
+  args: { variant: 'primary', size: 'lg', disabled: false, loading: false, autoContrast: false, label: 'Botón grande' },
   render: renderButton,
 };
 
 export const Disabled: Story = {
-  args: { variant: 'primary', size: 'md', disabled: true, autoContrast: false, label: 'No disponible' },
+  args: { variant: 'primary', size: 'md', disabled: true, loading: false, autoContrast: false, label: 'No disponible' },
+  render: renderButton,
+};
+
+export const Loading: Story = {
+  args: { variant: 'primary', size: 'md', disabled: false, loading: true, autoContrast: false, label: 'Guardando…' },
   render: renderButton,
 };
 

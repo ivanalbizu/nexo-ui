@@ -98,6 +98,22 @@ export class NxButton extends LitElement {
     .btn.variant-ghost:hover:not(:disabled) {
       background: color-mix(in srgb, var(--nx-color-text) 8%, transparent);
     }
+
+    .spinner {
+      width: 1em;
+      height: 1em;
+      border-radius: 50%;
+      border: 2px solid currentColor;
+      border-right-color: transparent;
+      animation: nx-button-spin 0.6s linear infinite;
+      flex-shrink: 0;
+    }
+    @keyframes nx-button-spin {
+      to { transform: rotate(360deg); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .spinner { animation-duration: 2s; }
+    }
   `;
 
   @property({ reflect: true }) variant: ButtonVariant = 'primary';
@@ -162,11 +178,9 @@ export class NxButton extends LitElement {
       <button
         class="btn variant-${this.variant} size-${this.size}"
         type=${this.type}
-        ?disabled=${this.disabled}
+        ?disabled=${this._isDisabled}
         @click=${this._handleClick}
-      >
-        <slot></slot>
-      </button>
+      >${this._inner}</button>
     `;
   }
 }

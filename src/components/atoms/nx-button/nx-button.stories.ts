@@ -9,6 +9,7 @@ interface ButtonArgs {
   disabled: boolean;
   autoContrast: boolean;
   label: string;
+  href: string;
 }
 
 const meta: Meta<ButtonArgs> = {
@@ -17,6 +18,7 @@ const meta: Meta<ButtonArgs> = {
   argTypes: {
     variant:      { control: 'select', options: ['primary', 'secondary', 'ghost'] },
     size:         { control: 'select', options: ['sm', 'md', 'lg'] },
+    href:         { control: 'text' },
     disabled:     { control: 'boolean' },
     autoContrast: { control: 'boolean', description: 'Usa CSS `contrast-color()` para calcular el color del texto del variant primary contra `--nx-color-primary`. Sólo aplica en navegadores con soporte; si no, mantiene `--nx-color-text-inverse` como fallback.' },
   },
@@ -32,10 +34,11 @@ export default meta;
 
 type Story = StoryObj<ButtonArgs>;
 
-const renderButton = ({ variant, size, disabled, autoContrast, label }: ButtonArgs) => html`
+const renderButton = ({ variant, size, disabled, autoContrast, label, href }: ButtonArgs) => html`
   <nx-button
     variant=${variant}
     size=${size}
+    href=${href || ''}
     ?disabled=${disabled}
     ?auto-contrast=${autoContrast}
   >${label}</nx-button>

@@ -14,6 +14,7 @@ import './css/global.css';
 // ─── Atoms ─────────────────────────────────────────────────────────────────
 export { NxButton, type ButtonVariant, type ButtonSize } from './components/atoms/nx-button/nx-button.ts';
 export { NxInput, type InputType } from './components/atoms/nx-input/nx-input.ts';
+export { NxSelect, type NxSelectOption } from './components/atoms/nx-select/nx-select.ts';
 export { NxBadge, type BadgeVariant, type BadgeSize } from './components/atoms/nx-badge/nx-badge.ts';
 export { NxChip } from './components/atoms/nx-chip/nx-chip.ts';
 export { NxSpinner, type SpinnerSize } from './components/atoms/nx-spinner/nx-spinner.ts';

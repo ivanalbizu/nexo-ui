@@ -1,0 +1,881 @@
+import { LitElement, html, css, nothing } from 'lit';
+import { customElement, property, state } from 'lit/decorators.js';
+import '@/components/atoms/nx-badge/nx-badge.js';
+
+/** Cada opción del select. `disabled` permite vetar entradas individuales. */
+export interface NxSelectOption {
+  value: string;
+  label: string;
+  disabled?: boolean;
+}
+
+let _counter = 0;
+
+/**
+ * Select form-associated con dos modos:
+ *
+ *  · Por defecto — `<select>` nativo. Path moderno con `appearance: base-select`
+ *    (Chrome 130+) para popup estilizado; fallback al popup nativo del SO.
+ *
+ *  · `searchable` — combobox ARIA propio (`role="combobox"` + `role="listbox"`)
+ *    con filter en vivo. Necesario porque el `<select>` nativo no admite un
+ *    `<input>` dentro del popup en navegadores actuales.
+ *
+ * En ambos modos la asociación con `<form>` se hace vía `ElementInternals`.
+ */
+@customElement('nx-select')
+export class NxSelect extends LitElement {
+  static formAssociated = true;
+  static override shadowRootOptions = {
+    ...LitElement.shadowRootOptions,
+    delegatesFocus: true,
+  };
+
+  private readonly _internals = this.attachInternals();
+  private readonly _uid = `nx-select-${++_counter}`;
+
+  static override styles = css`
+    :host {
+      display: block;
+    }
+
+    .wrapper {
+      display: flex;
+      flex-direction: column;
+      gap: 0.375rem;
+    }
+
+    label {
+      font-family: var(--nx-font-sans);
+      font-size: var(--nx-text-sm);
+      font-weight: 600;
+      color: var(--nx-color-text);
+    }
+
+    :host([hide-label]) label {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border-width: 0;
+    }
+
+    .required-mark {
+      color: var(--nx-color-error);
+      margin-left: var(--nx-space-1);
+      font-size: var(--nx-text-base);
+      line-height: 1;
+    }
+
+    /* Caja visual: borde, fondo y padding viven en .field para que el control
+       interno (select | input) sea transparente y el centrado se controle
+       desde aquí. Grid de dos columnas (control + caret) evita overlap.
+       La altura nace del contenido + padding-block. */
+    .field {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: center;
+      gap: var(--nx-space-2);
+      background: var(--nx-input-bg, var(--nx-color-surface-alt));
+      border-width: var(--nx-input-border-width, 1.5px);
+      border-style: solid;
+      border-color: var(--nx-input-border, var(--nx-color-border));
+      border-radius: var(--nx-input-radius, var(--nx-radius-md));
+      padding-inline: var(--nx-input-px, var(--nx-space-4));
+      padding-block: var(--nx-input-py, var(--nx-space-2));
+      box-sizing: border-box;
+      cursor: pointer;
+      transition: border-color var(--nx-transition), box-shadow var(--nx-transition);
+    }
+
+    .field:focus-within {
+      border-color: var(--nx-color-primary);
+      box-shadow: var(--nx-shadow-focus);
+    }
+
+    .field.has-error {
+      border-color: var(--nx-color-error);
+    }
+
+    .field.has-error:focus-within {
+      --nx-focus-ring-color: var(--nx-color-error);
+      box-shadow: var(--nx-shadow-focus);
+    }
+
+    :host([disabled]) .field {
+      background: var(--nx-color-surface);
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+
+    select,
+    input[role="combobox"] {
+      appearance: none;
+      -webkit-appearance: none;
+      background: transparent;
+      border: none;
+      outline: none;
+      width: 100%;
+      font-family: var(--nx-font-sans);
+      font-size: var(--nx-text-base);
+      line-height: 1.5;
+      color: var(--nx-color-text);
+      cursor: inherit;
+      padding: 0;
+      margin: 0;
+    }
+
+    input[role="combobox"] {
+      cursor: text;
+    }
+
+    input[role="combobox"]::placeholder {
+      color: var(--nx-color-text-muted);
+    }
+
+    /* Cuando no hay valor, mostramos el placeholder más tenue. */
+    select.is-placeholder {
+      color: var(--nx-color-text-muted);
+    }
+
+    /* Caret manual (SVG inline para centrado óptico predecible). Se oculta en
+       el path moderno SOLO cuando hay un <select> con appearance: base-select;
+       en modo searchable seguimos pintándolo nosotros y rota cuando _open. */
+    .caret {
+      display: flex;
+      width: 0.75rem;
+      height: 0.75rem;
+      color: var(--nx-color-text-muted);
+      pointer-events: none;
+    }
+    .caret svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+      transition: transform var(--nx-transition);
+    }
+    .field.is-open .caret svg {
+      transform: rotate(180deg);
+    }
+
+    /* Trailing area: agrupa clear-btn + caret en el modo searchable. */
+    .trailing {
+      display: flex;
+      align-items: center;
+      gap: var(--nx-space-2);
+    }
+
+    .clear-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 1.25rem;
+      height: 1.25rem;
+      padding: 0;
+      border: none;
+      border-radius: 50%;
+      background: transparent;
+      color: var(--nx-color-text-muted);
+      cursor: pointer;
+      transition: background var(--nx-transition), color var(--nx-transition);
+    }
+    .clear-btn:hover {
+      color: var(--nx-color-text);
+      background: color-mix(in srgb, var(--nx-color-text) 10%, transparent);
+    }
+    .clear-btn:focus-visible {
+      outline: var(--nx-focus-ring-width) solid var(--nx-focus-ring-color);
+      outline-offset: 1px;
+    }
+    .clear-btn svg {
+      width: 0.625rem;
+      height: 0.625rem;
+      display: block;
+    }
+
+    .error-msg {
+      font-family: var(--nx-font-sans);
+      font-size: var(--nx-text-sm);
+      color: var(--nx-color-error);
+      display: flex;
+      align-items: center;
+      gap: var(--nx-space-1);
+    }
+
+    .error-msg::before {
+      content: '⚠';
+      font-size: 0.875rem;
+    }
+
+    /* ─── Modo searchable / multi: combobox + listbox propio ─────────────── */
+    .combo-anchor {
+      position: relative;
+    }
+
+    /* Wrapper flex-wrap que ocupa la primera columna del grid: deja que chips
+       e input convivan en una línea, envuelvan cuando excedan el ancho, y
+       que el .trailing siga fijo a la derecha sin reorganizar nada. */
+    .content {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--nx-space-1);
+      align-items: center;
+      min-width: 0;
+    }
+
+    .content input[role="combobox"] {
+      /* basis 10rem + min-width igual: el input siempre tiene ≥10rem reales
+         para teclear cómodo. Si en la fila actual no caben 10rem, envuelve a
+         la siguiente fila en vez de quedarse comprimido a 7-8rem. */
+      flex: 1 1 10rem;
+      min-width: 10rem;
+    }
+
+    .chips {
+      display: contents;
+    }
+
+    /* Botón × dentro de cada chip. Hereda color via currentColor del badge. */
+    .chip-close {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 1rem;
+      height: 1rem;
+      margin-left: var(--nx-space-1);
+      margin-right: calc(var(--nx-space-2) * -0.5);
+      padding: 0;
+      border: none;
+      border-radius: 50%;
+      background: transparent;
+      color: inherit;
+      cursor: pointer;
+      opacity: 0.65;
+      transition: opacity var(--nx-transition), background var(--nx-transition);
+    }
+    .chip-close:hover {
+      opacity: 1;
+      background: color-mix(in srgb, currentColor 15%, transparent);
+    }
+    .chip-close:focus-visible {
+      outline: var(--nx-focus-ring-width) solid var(--nx-focus-ring-color);
+      outline-offset: 1px;
+    }
+    .chip-close svg {
+      width: 0.5rem;
+      height: 0.5rem;
+      display: block;
+    }
+
+    .listbox {
+      position: absolute;
+      top: calc(100% + var(--nx-space-1));
+      left: 0;
+      right: 0;
+      list-style: none;
+      margin: 0;
+      padding: var(--nx-space-1);
+      background: var(--nx-color-surface-alt);
+      border: 1px solid var(--nx-color-border);
+      border-radius: var(--nx-select-picker-radius, var(--nx-input-radius, var(--nx-radius-md)));
+      box-shadow: var(--nx-shadow-card);
+      max-height: 16rem;
+      overflow-y: auto;
+      z-index: 10;
+      font-family: var(--nx-font-sans);
+      font-size: var(--nx-text-base);
+      color: var(--nx-color-text);
+    }
+
+    .listbox[hidden] {
+      display: none;
+    }
+
+    .listbox.is-flipped {
+      top: auto;
+      bottom: calc(100% + var(--nx-space-1));
+    }
+
+    .listbox li {
+      padding: var(--nx-space-2) var(--nx-space-3);
+      border-radius: var(--nx-select-option-radius, var(--nx-input-radius, var(--nx-radius-sm)));
+      cursor: pointer;
+      line-height: 1.5;
+    }
+
+    .listbox li.is-active {
+      background: var(--nx-color-primary-subtle);
+    }
+
+    .listbox li[aria-selected="true"] {
+      background: var(--nx-color-primary);
+      color: var(--nx-color-text-inverse);
+    }
+
+    .listbox li[aria-disabled="true"] {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
+    .listbox .empty {
+      padding: var(--nx-space-3);
+      color: var(--nx-color-text-muted);
+      cursor: default;
+      text-align: center;
+    }
+
+    /* Live region para SR — invisible pero presente en el árbol de a11y. */
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border-width: 0;
+    }
+
+    /* ─── Path moderno: appearance: base-select ────────────────────────────
+       Sólo navegadores con soporte. Activa el popup totalmente custom y
+       estiliza ::picker(select) con los mismos tokens. */
+    @supports (appearance: base-select) {
+      select {
+        appearance: base-select;
+      }
+
+      /* Sólo ocultar el caret manual cuando hay un <select> nativo (path
+         estándar). En modo searchable no hay select y el caret debe verse. */
+      select ~ .caret {
+        display: none;
+      }
+
+      ::picker(select) {
+        appearance: base-select;
+        background: var(--nx-color-surface-alt);
+        border: 1px solid var(--nx-color-border);
+        border-radius: var(--nx-select-picker-radius, var(--nx-input-radius, var(--nx-radius-md)));
+        box-shadow: var(--nx-shadow-card);
+        padding: var(--nx-space-1);
+        font-family: var(--nx-font-sans);
+        font-size: var(--nx-text-base);
+        color: var(--nx-color-text);
+        min-width: anchor-size(width);
+      }
+
+      option {
+        padding: var(--nx-space-2) var(--nx-space-3);
+        border-radius: var(--nx-select-option-radius, var(--nx-input-radius, var(--nx-radius-sm)));
+        cursor: pointer;
+      }
+
+      option:hover:not(:disabled) {
+        background: var(--nx-color-primary-subtle);
+      }
+
+      option:checked {
+        background: var(--nx-color-primary);
+        color: var(--nx-color-text-inverse);
+      }
+
+      option:disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+      }
+    }
+  `;
+
+  @property() name        = '';
+  @property() value       = '';
+  @property() label       = '';
+  @property() placeholder = '';
+  @property() error       = '';
+  @property({ type: Array }) options: NxSelectOption[] = [];
+  @property({ type: Boolean, reflect: true }) disabled  = false;
+  @property({ type: Boolean, reflect: true }) required  = false;
+  @property({ type: Boolean, reflect: true }) searchable = false;
+  /** Si > 0 y `options.length` lo iguala o supera, fuerza el modo searchable
+      aunque la prop `searchable` sea false. 0 = nunca auto-activar. */
+  @property({ type: Number, attribute: 'searchable-after' }) searchableAfter = 0;
+  /** Modo multi-select. Cuando true, fuerza la UI custom (combobox) y usa
+      `values: string[]` como fuente de verdad en lugar de `value`. */
+  @property({ type: Boolean, reflect: true }) multiple = false;
+  /** Valores seleccionados en modo multi. Ignorado cuando `multiple` es false. */
+  @property({ type: Array }) values: string[] = [];
+  @property({ type: Boolean, reflect: true, attribute: 'hide-label' }) hideLabel = false;
+
+  /* Estado interno del modo searchable. */
+  @state() private _open = false;
+  @state() private _query = '';
+  @state() private _activeIndex = -1;
+  /** Verdadero cuando el usuario ha tecleado desde el último focus/selección.
+      Mientras sea false, el filter está inactivo y se ve la lista completa. */
+  @state() private _editing = false;
+  /** Cuando no cabe el popup abajo, se posiciona arriba del field. */
+  @state() private _flipped = false;
+
+  /** Searchable efectivo: prop explícita o auto-activado por umbral. */
+  private get _isSearchable(): boolean {
+    return this.searchable || (this.searchableAfter > 0 && this.options.length >= this.searchableAfter);
+  }
+
+  /** ¿Hay que pintar la UI custom? Sí cuando hay search o cuando es multi
+      (porque <select multiple> nativo no es la UX que queremos). */
+  private get _isCombobox(): boolean {
+    return this._isSearchable || this.multiple;
+  }
+
+  /** Etiqueta de un value, si existe en options. */
+  private _labelOf(value: string): string {
+    return this.options.find(o => o.value === value)?.label ?? value;
+  }
+
+  override connectedCallback() {
+    super.connectedCallback();
+    document.addEventListener('pointerdown', this._onDocPointerDown);
+  }
+
+  override disconnectedCallback() {
+    super.disconnectedCallback();
+    document.removeEventListener('pointerdown', this._onDocPointerDown);
+  }
+
+  override updated(changed: Map<string, unknown>) {
+    if (
+      changed.has('value') || changed.has('values') ||
+      changed.has('error') || changed.has('required') || changed.has('multiple')
+    ) {
+      this._syncFormValue();
+      this._updateValidity();
+    }
+    if ((changed.has('value') || changed.has('values')) && !this._open) {
+      this._query = this.multiple ? '' : this._selectedLabel();
+      this._editing = false;
+    }
+    if (changed.has('_open') && this._open) {
+      this._measurePopupPosition();
+    }
+    if (changed.has('_activeIndex') && this._activeIndex >= 0) {
+      this._scrollActiveIntoView();
+    }
+  }
+
+  private _syncFormValue() {
+    if (this.multiple) {
+      const fd = new FormData();
+      if (this.name) for (const v of this.values) fd.append(this.name, v);
+      this._internals.setFormValue(fd);
+    } else {
+      this._internals.setFormValue(this.value);
+    }
+  }
+
+  /** Decide si el popup va arriba o abajo según el espacio disponible. */
+  private _measurePopupPosition() {
+    const field = this.shadowRoot?.querySelector('.field') as HTMLElement | null;
+    if (!field) return;
+    const rect = field.getBoundingClientRect();
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const spaceAbove = rect.top;
+    // Aproximación al max-height del listbox (16rem ≈ 256px).
+    const popupHeight = 256;
+    this._flipped = spaceBelow < popupHeight && spaceAbove > spaceBelow;
+  }
+
+  formResetCallback() {
+    this.value = '';
+    this.values = [];
+    this._query = '';
+    this._editing = false;
+    this._open = false;
+    this._activeIndex = -1;
+    this._syncFormValue();
+  }
+
+  formDisabledCallback(disabled: boolean) {
+    this.disabled = disabled;
+  }
+
+  private _updateValidity() {
+    const anchor =
+      (this.shadowRoot?.querySelector('select, input') as HTMLElement | null) ?? undefined;
+    const isEmpty = this.multiple ? this.values.length === 0 : !this.value;
+    if (this.required && isEmpty) {
+      this._internals.setValidity({ valueMissing: true }, 'Selecciona una opción', anchor);
+    } else if (this.error) {
+      this._internals.setValidity({ customError: true }, this.error, anchor);
+    } else {
+      this._internals.setValidity({});
+    }
+  }
+
+  private get _filtered(): NxSelectOption[] {
+    if (!this._editing || !this._query) return this.options;
+    const q = this._normalize(this._query);
+    return this.options.filter(o => this._normalize(o.label).includes(q));
+  }
+
+  private _normalize(s: string): string {
+    return s.toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '');
+  }
+
+  private _selectedLabel(): string {
+    return this.options.find(o => o.value === this.value)?.label ?? '';
+  }
+
+  private _scrollActiveIntoView() {
+    const li = this.shadowRoot?.querySelector('.listbox li.is-active');
+    // behavior: 'auto' explícito para no animar aunque haya un
+    // scroll-behavior: smooth heredado en el documento.
+    if (li instanceof HTMLElement) li.scrollIntoView({ block: 'nearest', behavior: 'auto' });
+  }
+
+  private _onDocPointerDown = (e: PointerEvent) => {
+    if (!this._open) return;
+    if (!e.composedPath().includes(this)) {
+      this._closePopup();
+    }
+  };
+
+  private _closePopup() {
+    this._open = false;
+    this._editing = false;
+    this._query = this._selectedLabel();
+    this._activeIndex = -1;
+  }
+
+  private _select(opt: NxSelectOption) {
+    if (opt.disabled) return;
+    if (this.multiple) {
+      // Toggle: añadir o quitar del array. El popup queda abierto para
+      // permitir seleccionar varias opciones consecutivas.
+      this.values = this.values.includes(opt.value)
+        ? this.values.filter(v => v !== opt.value)
+        : [...this.values, opt.value];
+      this._query = '';
+      this._editing = false;
+      // Refocus al input (el click en el <li> puede haberlo perdido).
+      requestAnimationFrame(() => {
+        this.shadowRoot?.querySelector('input')?.focus();
+      });
+    } else {
+      this.value = opt.value;
+      this._query = opt.label;
+      this._editing = false;
+      this._open = false;
+      this._activeIndex = -1;
+    }
+    this._dispatchChange();
+  }
+
+  private _removeChip(value: string) {
+    if (this.disabled) return;
+    this.values = this.values.filter(v => v !== value);
+    this._dispatchChange();
+    requestAnimationFrame(() => {
+      this.shadowRoot?.querySelector('input')?.focus();
+    });
+  }
+
+  private _dispatchChange() {
+    this.dispatchEvent(new CustomEvent('nx-select-change', {
+      bubbles: true,
+      composed: true,
+      detail: { value: this.value, values: this.values },
+    }));
+  }
+
+  private _clear = (e: Event) => {
+    e.stopPropagation();
+    if (this.multiple) {
+      this.values = [];
+    } else {
+      this.value = '';
+    }
+    this._query = '';
+    this._editing = false;
+    this._activeIndex = -1;
+    this._dispatchChange();
+    requestAnimationFrame(() => {
+      this.shadowRoot?.querySelector('input')?.focus();
+    });
+  };
+
+  private _onSearchInput = (e: Event) => {
+    this._query = (e.target as HTMLInputElement).value;
+    this._editing = true;
+    this._open = true;
+    this._activeIndex = this._filtered.length > 0 ? 0 : -1;
+  };
+
+  private _onComboFocus = () => {
+    if (this.disabled) return;
+    this._open = true;
+    this._editing = false;
+    // En multi, el input se mantiene vacío (los chips muestran lo seleccionado).
+    // En single, se prefilla con la etiqueta para que el usuario vea el valor.
+    this._query = this.multiple ? '' : this._selectedLabel();
+    if (this._activeIndex < 0) {
+      const targetValue = this.multiple ? '' : this.value;
+      const idx = this.options.findIndex(o => o.value === targetValue && !o.disabled);
+      this._activeIndex = idx >= 0 ? idx : this.options.findIndex(o => !o.disabled);
+    }
+  };
+
+  private _onComboKeyDown = (e: KeyboardEvent) => {
+    const filtered = this._filtered;
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault();
+        if (!this._open) {
+          this._open = true;
+          return;
+        }
+        this._activeIndex = Math.min(this._activeIndex + 1, filtered.length - 1);
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        if (!this._open) {
+          this._open = true;
+          return;
+        }
+        this._activeIndex = Math.max(this._activeIndex - 1, 0);
+        break;
+      case 'Home':
+        if (this._open) {
+          e.preventDefault();
+          this._activeIndex = 0;
+        }
+        break;
+      case 'End':
+        if (this._open) {
+          e.preventDefault();
+          this._activeIndex = filtered.length - 1;
+        }
+        break;
+      case 'Enter':
+        if (this._open && this._activeIndex >= 0 && filtered[this._activeIndex]) {
+          e.preventDefault();
+          this._select(filtered[this._activeIndex]);
+        }
+        break;
+      case 'Escape':
+        if (this._open) {
+          e.preventDefault();
+          this._closePopup();
+        }
+        break;
+      case 'Tab':
+        if (this._open) this._closePopup();
+        break;
+      case 'Backspace':
+        // En multi, si el input está vacío, borra el último chip.
+        if (this.multiple && this._query === '' && this.values.length > 0) {
+          e.preventDefault();
+          this.values = this.values.slice(0, -1);
+          this._dispatchChange();
+        }
+        break;
+    }
+  };
+
+  private _onChange(e: Event) {
+    this.value = (e.target as HTMLSelectElement).value;
+    this.dispatchEvent(new CustomEvent('nx-select-change', {
+      bubbles: true,
+      composed: true,
+      detail: { value: this.value },
+    }));
+  }
+
+  /* ─── Render ─────────────────────────────────────────────────────────── */
+
+  override render() {
+    const errorId = `${this._uid}-error`;
+    return html`
+      <div class="wrapper">
+        ${this._renderLabel()}
+        ${this._isCombobox ? this._renderCombobox(errorId) : this._renderNative(errorId)}
+        ${this._renderError(errorId)}
+      </div>
+    `;
+  }
+
+  private _renderLabel() {
+    if (!this.label) return nothing;
+    return html`
+      <label for=${this._uid}>
+        ${this.label}
+        ${this.required ? html`<span class="required-mark" aria-hidden="true">*</span>` : ''}
+      </label>
+    `;
+  }
+
+  private _renderError(id: string) {
+    if (!this.error) return nothing;
+    return html`<span class="error-msg" id=${id} role="alert">${this.error}</span>`;
+  }
+
+  private _renderCaret() {
+    return html`
+      <span class="caret" aria-hidden="true">
+        <svg viewBox="0 0 12 12" fill="none">
+          <path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </span>
+    `;
+  }
+
+  private _renderNative(errorId: string) {
+    const isPlaceholder = !this.value;
+    const fieldClasses = ['field', this.error ? 'has-error' : ''].filter(Boolean).join(' ');
+    const selectClasses = isPlaceholder && this.placeholder ? 'is-placeholder' : '';
+    return html`
+      <div class=${fieldClasses}>
+        <select
+          id=${this._uid}
+          name=${this.name}
+          .value=${this.value}
+          ?disabled=${this.disabled}
+          ?required=${this.required}
+          class=${selectClasses || nothing}
+          aria-invalid=${this.error ? 'true' : 'false'}
+          aria-describedby=${this.error ? errorId : nothing}
+          @change=${this._onChange}
+        >
+          ${this.placeholder ? html`
+            <option value="" disabled ?selected=${!this.value}>${this.placeholder}</option>
+          ` : ''}
+          ${this.options.map(opt => html`
+            <option
+              value=${opt.value}
+              ?disabled=${opt.disabled}
+              ?selected=${opt.value === this.value}
+            >${opt.label}</option>
+          `)}
+        </select>
+        ${this._renderCaret()}
+      </div>
+    `;
+  }
+
+  private _renderCombobox(errorId: string) {
+    const fieldClasses = [
+      'field',
+      'is-combobox',
+      this.error ? 'has-error' : '',
+      this._open ? 'is-open' : '',
+      this.multiple ? 'is-multiple' : '',
+    ].filter(Boolean).join(' ');
+    const filtered = this._filtered;
+    const listboxId = `${this._uid}-listbox`;
+    const optId = (i: number) => `${this._uid}-opt-${i}`;
+    const activeId =
+      this._open && this._activeIndex >= 0 && filtered[this._activeIndex]
+        ? optId(this._activeIndex)
+        : '';
+    const counter = this._open
+      ? `${filtered.length} ${filtered.length === 1 ? 'resultado' : 'resultados'}`
+      : '';
+    const hasValue = this.multiple ? this.values.length > 0 : !!this.value;
+    const showClear = hasValue && !this.disabled;
+    const isOptionSelected = (opt: NxSelectOption) =>
+      this.multiple ? this.values.includes(opt.value) : this.value === opt.value;
+
+    return html`
+      <div class="combo-anchor">
+        <div class=${fieldClasses}>
+          <div class="content">
+            ${this.multiple && this.values.length > 0 ? html`
+              <div class="chips">
+                ${this.values.map(v => html`
+                  <nx-badge variant="primary" size="sm">
+                    ${this._labelOf(v)}
+                    <button
+                      type="button"
+                      class="chip-close"
+                      aria-label=${`Quitar ${this._labelOf(v)}`}
+                      @click=${(e: Event) => { e.stopPropagation(); this._removeChip(v); }}
+                    >
+                      <svg viewBox="0 0 12 12" fill="none">
+                        <path d="M3 3L9 9M3 9L9 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                      </svg>
+                    </button>
+                  </nx-badge>
+                `)}
+              </div>
+            ` : ''}
+            <input
+            id=${this._uid}
+            role="combobox"
+            type="text"
+            name=${this.name}
+            placeholder=${this.placeholder}
+            autocomplete="off"
+            aria-expanded=${this._open ? 'true' : 'false'}
+            aria-haspopup="listbox"
+            aria-controls=${listboxId}
+            aria-activedescendant=${activeId || nothing}
+            aria-autocomplete="list"
+            aria-invalid=${this.error ? 'true' : 'false'}
+            aria-describedby=${this.error ? errorId : nothing}
+            .value=${this._query}
+            ?disabled=${this.disabled}
+            ?required=${this.required}
+            @input=${this._onSearchInput}
+            @keydown=${this._onComboKeyDown}
+            @focus=${this._onComboFocus}
+          />
+          </div>
+          <div class="trailing">
+            ${showClear ? html`
+              <button
+                type="button"
+                class="clear-btn"
+                aria-label="Limpiar selección"
+                @click=${this._clear}
+              >
+                <svg viewBox="0 0 12 12" fill="none">
+                  <path d="M3 3L9 9M3 9L9 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                </svg>
+              </button>
+            ` : ''}
+            ${this._renderCaret()}
+          </div>
+        </div>
+
+        <ul
+          id=${listboxId}
+          class=${`listbox${this._flipped ? ' is-flipped' : ''}`}
+          role="listbox"
+          ?hidden=${!this._open}
+        >
+          ${filtered.length === 0
+            ? html`<li class="empty"><slot name="empty">Sin resultados</slot></li>`
+            : filtered.map((opt, i) => html`
+                <li
+                  id=${optId(i)}
+                  role="option"
+                  aria-selected=${isOptionSelected(opt) ? 'true' : 'false'}
+                  aria-disabled=${opt.disabled ? 'true' : nothing}
+                  class=${i === this._activeIndex ? 'is-active' : ''}
+                  @click=${(e: Event) => { e.stopPropagation(); this._select(opt); }}
+                  @mouseenter=${() => { this._activeIndex = i; }}
+                >${opt.label}</li>
+              `)}
+        </ul>
+      </div>
+
+      <span class="sr-only" aria-live="polite">${counter}</span>
+    `;
+  }
+}
+
+declare global {
+  interface HTMLElementTagNameMap { 'nx-select': NxSelect; }
+}

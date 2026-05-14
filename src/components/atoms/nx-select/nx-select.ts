@@ -271,33 +271,72 @@ export class NxSelect extends LitElement {
       display: block;
     }
 
-    .listbox {
+    /* Popup: la caja flotante. Contiene el header opcional (multi) y el
+       listbox scrollable. La posición absolute y el flip viven aquí. */
+    .popup {
       position: absolute;
       top: calc(100% + var(--nx-space-1));
       left: 0;
       right: 0;
-      list-style: none;
-      margin: 0;
-      padding: var(--nx-space-1);
       background: var(--nx-color-surface-alt);
       border: 1px solid var(--nx-color-border);
       border-radius: var(--nx-select-picker-radius, var(--nx-input-radius, var(--nx-radius-md)));
       box-shadow: var(--nx-shadow-card);
-      max-height: 16rem;
-      overflow-y: auto;
       z-index: 10;
-      font-family: var(--nx-font-sans);
-      font-size: var(--nx-text-base);
-      color: var(--nx-color-text);
+      overflow: hidden; /* recorta header/listbox al border-radius */
     }
 
-    .listbox[hidden] {
+    .popup[hidden] {
       display: none;
     }
 
-    .listbox.is-flipped {
+    .popup.is-flipped {
       top: auto;
       bottom: calc(100% + var(--nx-space-1));
+    }
+
+    /* Header con acciones "Seleccionar todo" / "Limpiar" (sólo multi). */
+    .popup-header {
+      display: flex;
+      gap: var(--nx-space-1);
+      padding: var(--nx-space-1);
+      border-bottom: 1px solid var(--nx-color-border);
+    }
+
+    .popup-action {
+      flex: 1;
+      padding: var(--nx-space-1) var(--nx-space-2);
+      border: none;
+      border-radius: var(--nx-select-option-radius, var(--nx-input-radius, var(--nx-radius-sm)));
+      background: transparent;
+      font-family: var(--nx-font-sans);
+      font-size: var(--nx-text-sm);
+      font-weight: 600;
+      color: var(--nx-color-primary);
+      cursor: pointer;
+      transition: background var(--nx-transition);
+    }
+    .popup-action:hover:not(:disabled) {
+      background: var(--nx-color-primary-subtle);
+    }
+    .popup-action:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+    .popup-action:focus-visible {
+      outline: var(--nx-focus-ring-width) solid var(--nx-focus-ring-color);
+      outline-offset: -2px;
+    }
+
+    .listbox {
+      list-style: none;
+      margin: 0;
+      padding: var(--nx-space-1);
+      max-height: 16rem;
+      overflow-y: auto;
+      font-family: var(--nx-font-sans);
+      font-size: var(--nx-text-base);
+      color: var(--nx-color-text);
     }
 
     .listbox li {
@@ -311,6 +350,7 @@ export class NxSelect extends LitElement {
       background: var(--nx-color-primary-subtle);
     }
 
+    /* Single: la opción elegida se rellena con el color de marca. */
     .listbox li[aria-selected="true"] {
       background: var(--nx-color-primary);
       color: var(--nx-color-text-inverse);
@@ -326,6 +366,61 @@ export class NxSelect extends LitElement {
       color: var(--nx-color-text-muted);
       cursor: default;
       text-align: center;
+    }
+
+    /* Multi: la selección se señala con un checkmark, no con relleno.
+       El fondo queda libre para el estado activo (teclado). */
+    .listbox.is-multiple li {
+      display: flex;
+      align-items: center;
+      gap: var(--nx-space-2);
+    }
+    .listbox.is-multiple li[aria-selected="true"] {
+      background: transparent;
+      color: var(--nx-color-text);
+    }
+    .listbox.is-multiple li[aria-selected="true"].is-active {
+      background: var(--nx-color-primary-subtle);
+    }
+    .listbox.is-multiple li .check {
+      display: flex;
+      width: 0.875rem;
+      height: 0.875rem;
+      flex-shrink: 0;
+      color: var(--nx-color-primary);
+      visibility: hidden;
+    }
+    .listbox.is-multiple li[aria-selected="true"] .check {
+      visibility: visible;
+    }
+    .listbox.is-multiple li .check svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    /* Chip "+N más" / "Ver menos": botón con aspecto de badge neutral. */
+    .chip-more {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px var(--nx-space-2);
+      border: none;
+      border-radius: var(--nx-badge-radius, var(--nx-radius-full));
+      background: var(--nx-color-border);
+      color: var(--nx-color-text-muted);
+      font-family: var(--nx-font-sans);
+      font-size: var(--nx-text-xs);
+      font-weight: 600;
+      white-space: nowrap;
+      cursor: pointer;
+      transition: color var(--nx-transition);
+    }
+    .chip-more:hover {
+      color: var(--nx-color-text);
+    }
+    .chip-more:focus-visible {
+      outline: var(--nx-focus-ring-width) solid var(--nx-focus-ring-color);
+      outline-offset: 1px;
     }
 
     /* Live region para SR — invisible pero presente en el árbol de a11y. */
@@ -407,6 +502,11 @@ export class NxSelect extends LitElement {
   @property({ type: Boolean, reflect: true }) multiple = false;
   /** Valores seleccionados en modo multi. Ignorado cuando `multiple` es false. */
   @property({ type: Array }) values: string[] = [];
+  /** Multi: nº máximo de chips visibles antes de colapsar el resto en "+N más".
+      0 = sin límite (muestra todos). */
+  @property({ type: Number, attribute: 'chip-limit' }) chipLimit = 0;
+  /** Multi: tope de valores seleccionables. 0 = sin tope. */
+  @property({ type: Number, attribute: 'max-selected' }) maxSelected = 0;
   @property({ type: Boolean, reflect: true, attribute: 'hide-label' }) hideLabel = false;
 
   /* Estado interno del modo searchable. */
@@ -418,6 +518,8 @@ export class NxSelect extends LitElement {
   @state() private _editing = false;
   /** Cuando no cabe el popup abajo, se posiciona arriba del field. */
   @state() private _flipped = false;
+  /** Multi: si los chips colapsados por `chipLimit` están desplegados. */
+  @state() private _chipsExpanded = false;
 
   /** Searchable efectivo: prop explícita o auto-activado por umbral. */
   private get _isSearchable(): boolean {
@@ -434,6 +536,42 @@ export class NxSelect extends LitElement {
   private _labelOf(value: string): string {
     return this.options.find(o => o.value === value)?.label ?? value;
   }
+
+  /** Multi: ¿se alcanzó el tope `maxSelected`? */
+  private get _isMaxed(): boolean {
+    return this.multiple && this.maxSelected > 0 && this.values.length >= this.maxSelected;
+  }
+
+  /** Multi: ¿están todas las opciones seleccionables ya elegidas (o tope lleno)? */
+  private get _allSelected(): boolean {
+    const selectable = this.options.filter(o => !o.disabled);
+    if (selectable.length === 0) return false;
+    if (this.maxSelected > 0) return this.values.length >= this.maxSelected;
+    return selectable.every(o => this.values.includes(o.value));
+  }
+
+  private _refocusInput() {
+    requestAnimationFrame(() => {
+      this.shadowRoot?.querySelector('input')?.focus();
+    });
+  }
+
+  private _selectAll = () => {
+    const selectable = this.options.filter(o => !o.disabled).map(o => o.value);
+    this.values = this.maxSelected > 0 ? selectable.slice(0, this.maxSelected) : selectable;
+    this._dispatchChange();
+    this._refocusInput();
+  };
+
+  private _clearAll = () => {
+    this.values = [];
+    this._dispatchChange();
+    this._refocusInput();
+  };
+
+  /** mousedown handler para botones del popup: evita que el botón robe el
+      foco al input (así el popup no se cierra ni parpadea). */
+  private _keepFocus = (e: Event) => e.preventDefault();
 
   override connectedCallback() {
     super.connectedCallback();
@@ -552,17 +690,18 @@ export class NxSelect extends LitElement {
   private _select(opt: NxSelectOption) {
     if (opt.disabled) return;
     if (this.multiple) {
+      const isSelected = this.values.includes(opt.value);
+      // Bloqueado por tope: sólo si es un alta nueva (deseleccionar siempre vale).
+      if (!isSelected && this._isMaxed) return;
       // Toggle: añadir o quitar del array. El popup queda abierto para
       // permitir seleccionar varias opciones consecutivas.
-      this.values = this.values.includes(opt.value)
+      this.values = isSelected
         ? this.values.filter(v => v !== opt.value)
         : [...this.values, opt.value];
       this._query = '';
       this._editing = false;
       // Refocus al input (el click en el <li> puede haberlo perdido).
-      requestAnimationFrame(() => {
-        this.shadowRoot?.querySelector('input')?.focus();
-      });
+      this._refocusInput();
     } else {
       this.value = opt.value;
       this._query = opt.label;
@@ -731,6 +870,25 @@ export class NxSelect extends LitElement {
     `;
   }
 
+  private _renderChip(v: string) {
+    const label = this._labelOf(v);
+    return html`
+      <nx-badge variant="primary" size="sm">
+        ${label}
+        <button
+          type="button"
+          class="chip-close"
+          aria-label=${`Quitar ${label}`}
+          @click=${(e: Event) => { e.stopPropagation(); this._removeChip(v); }}
+        >
+          <svg viewBox="0 0 12 12" fill="none">
+            <path d="M3 3L9 9M3 9L9 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+        </button>
+      </nx-badge>
+    `;
+  }
+
   private _renderNative(errorId: string) {
     const isPlaceholder = !this.value;
     const fieldClasses = ['field', this.error ? 'has-error' : ''].filter(Boolean).join(' ');
@@ -779,13 +937,22 @@ export class NxSelect extends LitElement {
       this._open && this._activeIndex >= 0 && filtered[this._activeIndex]
         ? optId(this._activeIndex)
         : '';
-    const counter = this._open
-      ? `${filtered.length} ${filtered.length === 1 ? 'resultado' : 'resultados'}`
-      : '';
+    const counter = !this._open
+      ? ''
+      : this._isMaxed
+        ? `Máximo de ${this.maxSelected} alcanzado`
+        : `${filtered.length} ${filtered.length === 1 ? 'resultado' : 'resultados'}`;
     const hasValue = this.multiple ? this.values.length > 0 : !!this.value;
     const showClear = hasValue && !this.disabled;
     const isOptionSelected = (opt: NxSelectOption) =>
       this.multiple ? this.values.includes(opt.value) : this.value === opt.value;
+
+    // Chips: si chipLimit > 0 y no está expandido, mostramos los primeros N
+    // y colapsamos el resto en un botón "+N más".
+    const collapse = this.multiple && this.chipLimit > 0 && !this._chipsExpanded;
+    const visibleChips = collapse ? this.values.slice(0, this.chipLimit) : this.values;
+    const hiddenCount = this.values.length - visibleChips.length;
+    const canCollapse = this.multiple && this.chipLimit > 0 && this.values.length > this.chipLimit;
 
     return html`
       <div class="combo-anchor">
@@ -793,21 +960,23 @@ export class NxSelect extends LitElement {
           <div class="content">
             ${this.multiple && this.values.length > 0 ? html`
               <div class="chips">
-                ${this.values.map(v => html`
-                  <nx-badge variant="primary" size="sm">
-                    ${this._labelOf(v)}
-                    <button
-                      type="button"
-                      class="chip-close"
-                      aria-label=${`Quitar ${this._labelOf(v)}`}
-                      @click=${(e: Event) => { e.stopPropagation(); this._removeChip(v); }}
-                    >
-                      <svg viewBox="0 0 12 12" fill="none">
-                        <path d="M3 3L9 9M3 9L9 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-                      </svg>
-                    </button>
-                  </nx-badge>
-                `)}
+                ${visibleChips.map(v => this._renderChip(v))}
+                ${hiddenCount > 0 ? html`
+                  <button
+                    type="button"
+                    class="chip-more"
+                    @mousedown=${this._keepFocus}
+                    @click=${() => { this._chipsExpanded = true; }}
+                  >+${hiddenCount} más</button>
+                ` : ''}
+                ${this._chipsExpanded && canCollapse ? html`
+                  <button
+                    type="button"
+                    class="chip-more"
+                    @mousedown=${this._keepFocus}
+                    @click=${() => { this._chipsExpanded = false; }}
+                  >Ver menos</button>
+                ` : ''}
               </div>
             ` : ''}
             <input
@@ -849,26 +1018,64 @@ export class NxSelect extends LitElement {
           </div>
         </div>
 
-        <ul
-          id=${listboxId}
-          class=${`listbox${this._flipped ? ' is-flipped' : ''}`}
-          role="listbox"
+        <div
+          class=${`popup${this._flipped ? ' is-flipped' : ''}`}
           ?hidden=${!this._open}
         >
-          ${filtered.length === 0
-            ? html`<li class="empty"><slot name="empty">Sin resultados</slot></li>`
-            : filtered.map((opt, i) => html`
-                <li
-                  id=${optId(i)}
-                  role="option"
-                  aria-selected=${isOptionSelected(opt) ? 'true' : 'false'}
-                  aria-disabled=${opt.disabled ? 'true' : nothing}
-                  class=${i === this._activeIndex ? 'is-active' : ''}
-                  @click=${(e: Event) => { e.stopPropagation(); this._select(opt); }}
-                  @mouseenter=${() => { this._activeIndex = i; }}
-                >${opt.label}</li>
-              `)}
-        </ul>
+          ${this.multiple ? html`
+            <div class="popup-header">
+              <button
+                type="button"
+                class="popup-action"
+                @mousedown=${this._keepFocus}
+                @click=${this._selectAll}
+                ?disabled=${this._allSelected}
+              >Seleccionar todo</button>
+              <button
+                type="button"
+                class="popup-action"
+                @mousedown=${this._keepFocus}
+                @click=${this._clearAll}
+                ?disabled=${this.values.length === 0}
+              >Limpiar</button>
+            </div>
+          ` : ''}
+          <ul
+            id=${listboxId}
+            class=${`listbox${this.multiple ? ' is-multiple' : ''}`}
+            role="listbox"
+            aria-multiselectable=${this.multiple ? 'true' : nothing}
+          >
+            ${filtered.length === 0
+              ? html`<li class="empty"><slot name="empty">Sin resultados</slot></li>`
+              : filtered.map((opt, i) => {
+                  const selected = isOptionSelected(opt);
+                  // En multi, una opción no seleccionada queda bloqueada si se
+                  // alcanzó el tope. Las ya seleccionadas siguen quitándose.
+                  const blocked = !!opt.disabled || (!selected && this._isMaxed);
+                  return html`
+                    <li
+                      id=${optId(i)}
+                      role="option"
+                      aria-selected=${selected ? 'true' : 'false'}
+                      aria-disabled=${blocked ? 'true' : nothing}
+                      class=${i === this._activeIndex ? 'is-active' : ''}
+                      @click=${(e: Event) => { e.stopPropagation(); this._select(opt); }}
+                      @mouseenter=${() => { this._activeIndex = i; }}
+                    >
+                      ${this.multiple ? html`
+                        <span class="check" aria-hidden="true">
+                          <svg viewBox="0 0 14 14" fill="none">
+                            <path d="M2.5 7.5L6 11L11.5 3.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                          </svg>
+                        </span>
+                      ` : ''}
+                      <span class="opt-label">${opt.label}</span>
+                    </li>
+                  `;
+                })}
+          </ul>
+        </div>
       </div>
 
       <span class="sr-only" aria-live="polite">${counter}</span>

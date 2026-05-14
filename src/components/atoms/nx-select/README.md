@@ -26,16 +26,13 @@ Select form-associated con doble path: `appearance: base-select` (Chrome 130+) y
   - Backspace sobre input vacío elimina el último chip.
   - Form-associated con múltiples entradas: `FormData` repite la `name` por cada valor (igual que `<select multiple>` nativo).
   - Combinable con `searchable` para multi + filter.
+  - Header del popup con acciones "Seleccionar todo" / "Limpiar".
+  - `chip-limit="N"`: colapsa los chips sobrantes en un botón "+N más" / "Ver menos".
+  - `max-selected="N"`: bloquea las opciones no seleccionadas al llegar al tope; el popup lo anuncia por la live region.
+  - Checkmark en las opciones seleccionadas (en multi el fondo queda para el estado activo de teclado).
 - Theming brand-aware: `--nx-input-radius`, `--nx-input-bg`, `--nx-input-border`, `--nx-input-py`/`px`, `--nx-select-picker-radius`, `--nx-select-option-radius`.
 
 ## Roadmap — mejoras incrementales
-
-### v2.5 polish multi (pendientes)
-
-- Acciones "Seleccionar todo" / "Limpiar todos" en el header del popup.
-- Chips truncados con "+N más" cuando exceden el ancho del field.
-- Indicador visual extra (checkmark) en opciones seleccionadas — hoy se usa solo el fondo `aria-selected`.
-- Tope `max-selected="N"` opcional con feedback al usuario.
 
 ### v3 · Grupos y datos asíncronos
 

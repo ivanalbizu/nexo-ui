@@ -316,6 +316,43 @@ export const MultipleSearchable: Story = {
 };
 
 /**
+ * `chip-limit="2"`: sólo se ven 2 chips; el resto se colapsa en un botón
+ * "+N más" que los despliega (y un "Ver menos" para volver a colapsar).
+ */
+export const MultipleChipLimit: Story = {
+  parameters: { controls: { disable: true } },
+  render: () => html`
+    <nx-select
+      label="Países visitados"
+      placeholder="Añade más…"
+      multiple
+      chip-limit="2"
+      .options=${COUNTRIES}
+      .values=${['es', 'fr', 'it', 'de']}
+    ></nx-select>
+  `,
+};
+
+/**
+ * `max-selected="3"`: al llegar a 3 valores, las opciones no seleccionadas se
+ * bloquean (las ya elegidas siguen quitándose). El popup anuncia el tope.
+ */
+export const MultipleMaxSelected: Story = {
+  parameters: { controls: { disable: true } },
+  render: () => html`
+    <nx-select
+      label="Elige hasta 3 países"
+      placeholder="Máximo 3…"
+      multiple
+      searchable
+      max-selected="3"
+      .options=${COUNTRIES}
+      .values=${['es', 'fr']}
+    ></nx-select>
+  `,
+};
+
+/**
  * Multi dentro de `<form>`: cada valor seleccionado se envía como una entrada
  * separada con la misma `name`, igual que un `<select multiple>` nativo.
  * Después de enviar verás `countries: ['es', 'fr', ...]` en el `pre`.

@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import './nx-select.ts';
-import type { NxSelectOption } from './nx-select.ts';
+import type { NxSelectOption, NxSelectItem } from './nx-select.ts';
 
 interface SelectArgs {
   label: string;
@@ -12,9 +12,36 @@ interface SelectArgs {
   required: boolean;
   searchable: boolean;
   searchableAfter: number;
+  size: 'sm' | 'md' | 'lg';
   hideLabel: boolean;
-  options: NxSelectOption[];
+  options: NxSelectItem[];
 }
+
+/** Mismas opciones agrupadas por continente, para las stories de optgroups. */
+const COUNTRIES_GROUPED: NxSelectItem[] = [
+  {
+    label: 'Europa',
+    options: [
+      { value: 'es', label: 'España' },
+      { value: 'pt', label: 'Portugal' },
+      { value: 'fr', label: 'Francia' },
+      { value: 'it', label: 'Italia' },
+      { value: 'de', label: 'Alemania' },
+      { value: 'uk', label: 'Reino Unido' },
+    ],
+  },
+  {
+    label: 'América',
+    options: [
+      { value: 'us', label: 'Estados Unidos' },
+      { value: 'mx', label: 'México' },
+      { value: 'ar', label: 'Argentina' },
+      { value: 'br', label: 'Brasil' },
+    ],
+  },
+  // Opción suelta, sin grupo — convive con los grupos.
+  { value: 'other', label: 'Otro' },
+];
 
 const COUNTRIES: NxSelectOption[] = [
   { value: 'es', label: 'España' },
@@ -45,6 +72,7 @@ const meta: Meta<SelectArgs> = {
     required:    { control: 'boolean' },
     searchable:  { control: 'boolean', description: 'Activa el combobox ARIA con filter en vivo. Sin este flag se usa `<select>` nativo.' },
     searchableAfter: { control: 'number', description: 'Si > 0, fuerza el modo searchable cuando `options.length` lo iguala o supera. 0 = nunca auto-activar.' },
+    size:        { control: 'inline-radio', options: ['sm', 'md', 'lg'] },
     hideLabel:   { control: 'boolean' },
     options:     { control: 'object' },
   },
@@ -70,6 +98,7 @@ const renderSelect = (a: SelectArgs) => html`
     placeholder=${a.placeholder}
     value=${a.value}
     error=${a.error}
+    size=${a.size}
     ?disabled=${a.disabled}
     ?required=${a.required}
     ?searchable=${a.searchable}
@@ -89,6 +118,7 @@ export const Default: Story = {
     required: false,
     searchable: false,
     searchableAfter: 0,
+    size: 'md',
     hideLabel: false,
     options: COUNTRIES,
   },
@@ -105,6 +135,7 @@ export const Preselected: Story = {
     required: false,
     searchable: false,
     searchableAfter: 0,
+    size: 'md',
     hideLabel: false,
     options: PLANS,
   },
@@ -121,6 +152,7 @@ export const Required: Story = {
     required: true,
     searchable: false,
     searchableAfter: 0,
+    size: 'md',
     hideLabel: false,
     options: COUNTRIES,
   },
@@ -137,6 +169,7 @@ export const WithError: Story = {
     required: true,
     searchable: false,
     searchableAfter: 0,
+    size: 'md',
     hideLabel: false,
     options: PLANS,
   },
@@ -153,6 +186,7 @@ export const DisabledOption: Story = {
     required: false,
     searchable: false,
     searchableAfter: 0,
+    size: 'md',
     hideLabel: false,
     options: PLANS,
   },
@@ -169,6 +203,7 @@ export const Disabled: Story = {
     required: false,
     searchable: false,
     searchableAfter: 0,
+    size: 'md',
     hideLabel: false,
     options: COUNTRIES,
   },
@@ -189,6 +224,7 @@ export const Searchable: Story = {
     required: false,
     searchable: true,
     searchableAfter: 0,
+    size: 'md',
     hideLabel: false,
     options: COUNTRIES,
   },
@@ -209,6 +245,7 @@ export const SearchablePreselected: Story = {
     required: false,
     searchable: true,
     searchableAfter: 0,
+    size: 'md',
     hideLabel: false,
     options: COUNTRIES,
   },
@@ -226,6 +263,7 @@ export const SearchableLong: Story = {
     required: false,
     searchable: true,
     searchableAfter: 0,
+    size: 'md',
     hideLabel: false,
     options: [
       'Madrid','Barcelona','Valencia','Sevilla','Zaragoza','Málaga','Murcia','Palma',
@@ -253,6 +291,7 @@ export const SearchableAuto: Story = {
     required: false,
     searchable: false,
     searchableAfter: 5,
+    size: 'md',
     hideLabel: false,
     options: COUNTRIES,
   },
@@ -353,6 +392,59 @@ export const MultipleMaxSelected: Story = {
 };
 
 /**
+ * Optgroups en el path nativo: `options` acepta `{ label, options: [] }`.
+ * Se renderiza con `<optgroup>` y el popup nativo (o `::picker(select)`)
+ * agrupa visualmente. Las opciones sueltas conviven con los grupos.
+ */
+export const Grouped: Story = {
+  args: {
+    label: 'País',
+    placeholder: 'Selecciona un país…',
+    value: '',
+    error: '',
+    disabled: false,
+    required: false,
+    searchable: false,
+    searchableAfter: 0,
+    size: 'md',
+    hideLabel: false,
+    options: COUNTRIES_GROUPED,
+  },
+  render: renderSelect,
+};
+
+/**
+ * Optgroups en el combobox: cabeceras `role="group"` sticky, el filter
+ * descarta los grupos que se quedan sin coincidencias.
+ */
+export const GroupedSearchable: Story = {
+  parameters: { controls: { disable: true } },
+  render: () => html`
+    <nx-select
+      label="País"
+      placeholder="Busca un país…"
+      searchable
+      .options=${COUNTRIES_GROUPED}
+    ></nx-select>
+  `,
+};
+
+/** Optgroups + multi-select: grupos, chips y checkmark a la vez. */
+export const GroupedMultiple: Story = {
+  parameters: { controls: { disable: true } },
+  render: () => html`
+    <nx-select
+      label="Países"
+      placeholder="Selecciona varios…"
+      multiple
+      searchable
+      .options=${COUNTRIES_GROUPED}
+      .values=${['es', 'br']}
+    ></nx-select>
+  `,
+};
+
+/**
  * Multi dentro de `<form>`: cada valor seleccionado se envía como una entrada
  * separada con la misma `name`, igual que un `<select multiple>` nativo.
  * Después de enviar verás `countries: ['es', 'fr', ...]` en el `pre`.
@@ -392,6 +484,43 @@ export const MultipleInsideForm: Story = {
       </form>
     `;
   },
+};
+
+/**
+ * Tres tamaños — `sm | md | lg` — alineados con `nx-button` / `nx-input`.
+ * El atributo `size` sólo reescribe tokens internos de padding y tipografía.
+ */
+export const Sizes: Story = {
+  parameters: { controls: { disable: true } },
+  render: () => html`
+    <div style="display:flex;flex-direction:column;gap:1rem;max-width:320px;">
+      <nx-select label="Small"  size="sm" placeholder="sm…" .options=${COUNTRIES}></nx-select>
+      <nx-select label="Medium" size="md" placeholder="md…" .options=${COUNTRIES}></nx-select>
+      <nx-select label="Large"  size="lg" placeholder="lg…" .options=${COUNTRIES}></nx-select>
+    </div>
+  `,
+};
+
+/**
+ * Slots `prefix` / `suffix` para iconos decorativos — mismo patrón que
+ * `nx-input`. Funcionan en ambos modos (nativo y combobox).
+ */
+export const PrefixSuffix: Story = {
+  parameters: { controls: { disable: true } },
+  render: () => html`
+    <div style="display:flex;flex-direction:column;gap:1rem;max-width:320px;">
+      <nx-select label="Con prefix" placeholder="Selecciona país…" .options=${COUNTRIES}>
+        <span slot="prefix">🌍</span>
+      </nx-select>
+      <nx-select label="Con suffix" searchable placeholder="Busca…" .options=${COUNTRIES}>
+        <span slot="suffix">🔎</span>
+      </nx-select>
+      <nx-select label="Prefix + suffix" placeholder="Moneda…" .options=${PLANS}>
+        <span slot="prefix">💶</span>
+        <span slot="suffix">/mes</span>
+      </nx-select>
+    </div>
+  `,
 };
 
 export const InsideForm: Story = {

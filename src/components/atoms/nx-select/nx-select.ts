@@ -9,6 +9,21 @@ export interface NxSelectOption {
   disabled?: boolean;
 }
 
+/** Grupo de opciones — se pinta como `<optgroup>` o como sección del listbox. */
+export interface NxSelectGroup {
+  label: string;
+  options: NxSelectOption[];
+}
+
+/** Un item de `options` puede ser una opción suelta o un grupo. */
+export type NxSelectItem = NxSelectOption | NxSelectGroup;
+
+/** Tamaños — alineados con `nx-button` / `nx-input`. */
+export type NxSelectSize = 'sm' | 'md' | 'lg';
+
+const isGroup = (item: NxSelectItem): item is NxSelectGroup =>
+  Array.isArray((item as NxSelectGroup).options);
+
 let _counter = 0;
 
 /**
@@ -37,6 +52,32 @@ export class NxSelect extends LitElement {
   static override styles = css`
     :host {
       display: block;
+      /* Tamaño 'md' por defecto. Los selectores :host([size=...]) sólo
+         reescriben estas vars; el control las consume siempre igual y los
+         tokens públicos --nx-input-* siguen ganando por ir primero en var(). */
+      --nx-select-px: var(--nx-space-4);
+      --nx-select-py: var(--nx-space-2);
+      --nx-select-fs: var(--nx-text-base);
+      --nx-select-control-h: 1.5rem;
+      /* line-height del <select>. Por defecto = altura del control (centra
+         bien en md/lg). En sm se sube porque Chrome descentra el texto del
+         <select> con fuentes pequeñas aunque line-height == height. */
+      --nx-select-control-lh: var(--nx-select-control-h);
+    }
+
+    :host([size="sm"]) {
+      --nx-select-px: var(--nx-space-3);
+      --nx-select-py: var(--nx-space-1);
+      --nx-select-fs: var(--nx-text-sm);
+      --nx-select-control-h: 1.375rem;
+      --nx-select-control-lh: 2;
+    }
+
+    :host([size="lg"]) {
+      --nx-select-px: var(--nx-space-6);
+      --nx-select-py: var(--nx-space-3);
+      --nx-select-fs: 1rem;
+      --nx-select-control-h: 1.625rem;
     }
 
     .wrapper {
@@ -76,8 +117,7 @@ export class NxSelect extends LitElement {
        desde aquí. Grid de dos columnas (control + caret) evita overlap.
        La altura nace del contenido + padding-block. */
     .field {
-      display: grid;
-      grid-template-columns: 1fr auto;
+      display: flex;
       align-items: center;
       gap: var(--nx-space-2);
       background: var(--nx-input-bg, var(--nx-color-surface-alt));
@@ -85,8 +125,8 @@ export class NxSelect extends LitElement {
       border-style: solid;
       border-color: var(--nx-input-border, var(--nx-color-border));
       border-radius: var(--nx-input-radius, var(--nx-radius-md));
-      padding-inline: var(--nx-input-px, var(--nx-space-4));
-      padding-block: var(--nx-input-py, var(--nx-space-2));
+      padding-inline: var(--nx-input-px, var(--nx-select-px));
+      padding-block: var(--nx-input-py, var(--nx-select-py));
       box-sizing: border-box;
       cursor: pointer;
       transition: border-color var(--nx-transition), box-shadow var(--nx-transition);
@@ -119,18 +159,34 @@ export class NxSelect extends LitElement {
       background: transparent;
       border: none;
       outline: none;
-      width: 100%;
       font-family: var(--nx-font-sans);
-      font-size: var(--nx-text-base);
-      line-height: 1.5;
+      font-size: var(--nx-select-fs);
       color: var(--nx-color-text);
       cursor: inherit;
       padding: 0;
       margin: 0;
     }
 
+    /* <select>: altura explícita + line-height igual a esa altura. El
+       navegador centra el texto de la opción de forma determinista cuando el
+       <select> tiene height explícito; dejarlo en auto (line-height unitless)
+       descentra el texto, sobre todo en fuentes pequeñas. */
+    select {
+      height: var(--nx-select-control-h);
+      line-height: var(--nx-select-control-lh);
+    }
+
+    /* Control principal (select | .content): ocupa el espacio libre del flex
+       del .field; prefix/suffix/caret se quedan a tamaño contenido. */
+    select,
+    .content {
+      flex: 1;
+      min-width: 0;
+    }
+
     input[role="combobox"] {
       cursor: text;
+      line-height: 1.5;
     }
 
     input[role="combobox"]::placeholder {
@@ -162,12 +218,24 @@ export class NxSelect extends LitElement {
       transform: rotate(180deg);
     }
 
-    /* Trailing area: agrupa clear-btn + caret en el modo searchable. */
+    /* Trailing area: agrupa slot suffix + clear-btn + caret. */
     .trailing {
       display: flex;
       align-items: center;
       gap: var(--nx-space-2);
     }
+
+    /* Slots decorativos prefix/suffix. Se ocultan (sin hueco de gap, por ser
+       flex) cuando no hay contenido — has-prefix/has-suffix se reflejan desde
+       los slotchange. */
+    .affix {
+      display: flex;
+      align-items: center;
+      flex-shrink: 0;
+      color: var(--nx-color-text-muted);
+    }
+    :host(:not([has-prefix])) .affix-prefix { display: none; }
+    :host(:not([has-suffix])) .affix-suffix { display: none; }
 
     .clear-btn {
       display: flex;
@@ -329,34 +397,36 @@ export class NxSelect extends LitElement {
     }
 
     .listbox {
-      list-style: none;
       margin: 0;
       padding: var(--nx-space-1);
       max-height: 16rem;
       overflow-y: auto;
+      /* Reserva el alto de la .group-label sticky para que scrollIntoView no
+         deje la opción activa tapada por la cabecera al navegar con teclado. */
+      scroll-padding-top: calc(var(--nx-text-xs) * 1.5 + var(--nx-space-2) * 2);
       font-family: var(--nx-font-sans);
-      font-size: var(--nx-text-base);
+      font-size: var(--nx-select-fs);
       color: var(--nx-color-text);
     }
 
-    .listbox li {
+    .listbox [role="option"] {
       padding: var(--nx-space-2) var(--nx-space-3);
       border-radius: var(--nx-select-option-radius, var(--nx-input-radius, var(--nx-radius-sm)));
       cursor: pointer;
       line-height: 1.5;
     }
 
-    .listbox li.is-active {
+    .listbox [role="option"].is-active {
       background: var(--nx-color-primary-subtle);
     }
 
     /* Single: la opción elegida se rellena con el color de marca. */
-    .listbox li[aria-selected="true"] {
+    .listbox [role="option"][aria-selected="true"] {
       background: var(--nx-color-primary);
       color: var(--nx-color-text-inverse);
     }
 
-    .listbox li[aria-disabled="true"] {
+    .listbox [role="option"][aria-disabled="true"] {
       opacity: 0.45;
       cursor: not-allowed;
     }
@@ -368,21 +438,36 @@ export class NxSelect extends LitElement {
       text-align: center;
     }
 
+    /* Cabecera de grupo (optgroup). Sticky para no perder el contexto al
+       hacer scroll dentro de una lista larga. */
+    .group-label {
+      position: sticky;
+      top: 0;
+      padding: var(--nx-space-1) var(--nx-space-3);
+      background: var(--nx-color-surface-alt);
+      font-size: var(--nx-text-xs);
+      line-height: 1.5;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--nx-color-text-muted);
+    }
+
     /* Multi: la selección se señala con un checkmark, no con relleno.
        El fondo queda libre para el estado activo (teclado). */
-    .listbox.is-multiple li {
+    .listbox.is-multiple [role="option"] {
       display: flex;
       align-items: center;
       gap: var(--nx-space-2);
     }
-    .listbox.is-multiple li[aria-selected="true"] {
+    .listbox.is-multiple [role="option"][aria-selected="true"] {
       background: transparent;
       color: var(--nx-color-text);
     }
-    .listbox.is-multiple li[aria-selected="true"].is-active {
+    .listbox.is-multiple [role="option"][aria-selected="true"].is-active {
       background: var(--nx-color-primary-subtle);
     }
-    .listbox.is-multiple li .check {
+    .listbox.is-multiple [role="option"] .check {
       display: flex;
       width: 0.875rem;
       height: 0.875rem;
@@ -390,10 +475,10 @@ export class NxSelect extends LitElement {
       color: var(--nx-color-primary);
       visibility: hidden;
     }
-    .listbox.is-multiple li[aria-selected="true"] .check {
+    .listbox.is-multiple [role="option"][aria-selected="true"] .check {
       visibility: visible;
     }
-    .listbox.is-multiple li .check svg {
+    .listbox.is-multiple [role="option"] .check svg {
       width: 100%;
       height: 100%;
       display: block;
@@ -445,8 +530,9 @@ export class NxSelect extends LitElement {
       }
 
       /* Sólo ocultar el caret manual cuando hay un <select> nativo (path
-         estándar). En modo searchable no hay select y el caret debe verse. */
-      select ~ .caret {
+         estándar) — el navegador pinta su propio ::picker-icon. En modo
+         searchable no hay <select> y el caret debe verse. */
+      select ~ .trailing .caret {
         display: none;
       }
 
@@ -490,7 +576,7 @@ export class NxSelect extends LitElement {
   @property() label       = '';
   @property() placeholder = '';
   @property() error       = '';
-  @property({ type: Array }) options: NxSelectOption[] = [];
+  @property({ type: Array }) options: NxSelectItem[] = [];
   @property({ type: Boolean, reflect: true }) disabled  = false;
   @property({ type: Boolean, reflect: true }) required  = false;
   @property({ type: Boolean, reflect: true }) searchable = false;
@@ -507,7 +593,12 @@ export class NxSelect extends LitElement {
   @property({ type: Number, attribute: 'chip-limit' }) chipLimit = 0;
   /** Multi: tope de valores seleccionables. 0 = sin tope. */
   @property({ type: Number, attribute: 'max-selected' }) maxSelected = 0;
+  /** Tamaño del control — ajusta padding y tipografía vía tokens internos. */
+  @property({ reflect: true }) size: NxSelectSize = 'md';
   @property({ type: Boolean, reflect: true, attribute: 'hide-label' }) hideLabel = false;
+  /** Reflejados desde los `slotchange` de prefix/suffix para CSS. */
+  @property({ type: Boolean, reflect: true, attribute: 'has-prefix' }) hasPrefix = false;
+  @property({ type: Boolean, reflect: true, attribute: 'has-suffix' }) hasSuffix = false;
 
   /* Estado interno del modo searchable. */
   @state() private _open = false;
@@ -521,9 +612,15 @@ export class NxSelect extends LitElement {
   /** Multi: si los chips colapsados por `chipLimit` están desplegados. */
   @state() private _chipsExpanded = false;
 
+  /** Todas las opciones aplanadas (los grupos se expanden en su sitio).
+      Es la fuente de verdad para lookups por value, índices y filter. */
+  private get _flatOptions(): NxSelectOption[] {
+    return this.options.flatMap(item => isGroup(item) ? item.options : [item]);
+  }
+
   /** Searchable efectivo: prop explícita o auto-activado por umbral. */
   private get _isSearchable(): boolean {
-    return this.searchable || (this.searchableAfter > 0 && this.options.length >= this.searchableAfter);
+    return this.searchable || (this.searchableAfter > 0 && this._flatOptions.length >= this.searchableAfter);
   }
 
   /** ¿Hay que pintar la UI custom? Sí cuando hay search o cuando es multi
@@ -534,7 +631,13 @@ export class NxSelect extends LitElement {
 
   /** Etiqueta de un value, si existe en options. */
   private _labelOf(value: string): string {
-    return this.options.find(o => o.value === value)?.label ?? value;
+    return this._flatOptions.find(o => o.value === value)?.label ?? value;
+  }
+
+  /** ¿La opción pasa el filter activo? Sin filter (o sin query), todo pasa. */
+  private _matchesQuery(opt: NxSelectOption): boolean {
+    if (!this._editing || !this._query) return true;
+    return this._normalize(opt.label).includes(this._normalize(this._query));
   }
 
   /** Multi: ¿se alcanzó el tope `maxSelected`? */
@@ -544,7 +647,7 @@ export class NxSelect extends LitElement {
 
   /** Multi: ¿están todas las opciones seleccionables ya elegidas (o tope lleno)? */
   private get _allSelected(): boolean {
-    const selectable = this.options.filter(o => !o.disabled);
+    const selectable = this._flatOptions.filter(o => !o.disabled);
     if (selectable.length === 0) return false;
     if (this.maxSelected > 0) return this.values.length >= this.maxSelected;
     return selectable.every(o => this.values.includes(o.value));
@@ -557,7 +660,7 @@ export class NxSelect extends LitElement {
   }
 
   private _selectAll = () => {
-    const selectable = this.options.filter(o => !o.disabled).map(o => o.value);
+    const selectable = this._flatOptions.filter(o => !o.disabled).map(o => o.value);
     this.values = this.maxSelected > 0 ? selectable.slice(0, this.maxSelected) : selectable;
     this._dispatchChange();
     this._refocusInput();
@@ -572,6 +675,14 @@ export class NxSelect extends LitElement {
   /** mousedown handler para botones del popup: evita que el botón robe el
       foco al input (así el popup no se cierra ni parpadea). */
   private _keepFocus = (e: Event) => e.preventDefault();
+
+  private _onPrefixSlot = (e: Event) => {
+    this.hasPrefix = (e.target as HTMLSlotElement).assignedNodes().length > 0;
+  };
+
+  private _onSuffixSlot = (e: Event) => {
+    this.hasSuffix = (e.target as HTMLSlotElement).assignedNodes().length > 0;
+  };
 
   override connectedCallback() {
     super.connectedCallback();
@@ -652,10 +763,10 @@ export class NxSelect extends LitElement {
     }
   }
 
+  /** Lista plana filtrada — su orden coincide con el de render, así los
+      índices de teclado (`_activeIndex`) se mapean 1:1. */
   private get _filtered(): NxSelectOption[] {
-    if (!this._editing || !this._query) return this.options;
-    const q = this._normalize(this._query);
-    return this.options.filter(o => this._normalize(o.label).includes(q));
+    return this._flatOptions.filter(o => this._matchesQuery(o));
   }
 
   private _normalize(s: string): string {
@@ -663,14 +774,14 @@ export class NxSelect extends LitElement {
   }
 
   private _selectedLabel(): string {
-    return this.options.find(o => o.value === this.value)?.label ?? '';
+    return this._flatOptions.find(o => o.value === this.value)?.label ?? '';
   }
 
   private _scrollActiveIntoView() {
-    const li = this.shadowRoot?.querySelector('.listbox li.is-active');
+    const el = this.shadowRoot?.querySelector('.listbox .is-active');
     // behavior: 'auto' explícito para no animar aunque haya un
     // scroll-behavior: smooth heredado en el documento.
-    if (li instanceof HTMLElement) li.scrollIntoView({ block: 'nearest', behavior: 'auto' });
+    if (el instanceof HTMLElement) el.scrollIntoView({ block: 'nearest', behavior: 'auto' });
   }
 
   private _onDocPointerDown = (e: PointerEvent) => {
@@ -761,8 +872,8 @@ export class NxSelect extends LitElement {
     this._query = this.multiple ? '' : this._selectedLabel();
     if (this._activeIndex < 0) {
       const targetValue = this.multiple ? '' : this.value;
-      const idx = this.options.findIndex(o => o.value === targetValue && !o.disabled);
-      this._activeIndex = idx >= 0 ? idx : this.options.findIndex(o => !o.disabled);
+      const idx = this._filtered.findIndex(o => o.value === targetValue && !o.disabled);
+      this._activeIndex = idx >= 0 ? idx : this._filtered.findIndex(o => !o.disabled);
     }
   };
 
@@ -870,6 +981,41 @@ export class NxSelect extends LitElement {
     `;
   }
 
+  /** Slot decorativo a la izquierda del control (icono, etc). */
+  private _renderPrefix() {
+    return html`
+      <slot name="prefix" class="affix affix-prefix" @slotchange=${this._onPrefixSlot}></slot>
+    `;
+  }
+
+  /** Zona derecha: slot suffix + (clear opcional) + caret. */
+  private _renderTrailing(withClear: boolean) {
+    return html`
+      <div class="trailing">
+        <slot name="suffix" class="affix affix-suffix" @slotchange=${this._onSuffixSlot}></slot>
+        ${withClear ? this._renderClearBtn() : nothing}
+        ${this._renderCaret()}
+      </div>
+    `;
+  }
+
+  private _renderClearBtn() {
+    const hasValue = this.multiple ? this.values.length > 0 : !!this.value;
+    if (!hasValue || this.disabled) return nothing;
+    return html`
+      <button
+        type="button"
+        class="clear-btn"
+        aria-label="Limpiar selección"
+        @click=${this._clear}
+      >
+        <svg viewBox="0 0 12 12" fill="none">
+          <path d="M3 3L9 9M3 9L9 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+      </button>
+    `;
+  }
+
   private _renderChip(v: string) {
     const label = this._labelOf(v);
     return html`
@@ -889,12 +1035,23 @@ export class NxSelect extends LitElement {
     `;
   }
 
+  private _renderNativeOption(opt: NxSelectOption) {
+    return html`
+      <option
+        value=${opt.value}
+        ?disabled=${opt.disabled}
+        ?selected=${opt.value === this.value}
+      >${opt.label}</option>
+    `;
+  }
+
   private _renderNative(errorId: string) {
     const isPlaceholder = !this.value;
     const fieldClasses = ['field', this.error ? 'has-error' : ''].filter(Boolean).join(' ');
     const selectClasses = isPlaceholder && this.placeholder ? 'is-placeholder' : '';
     return html`
       <div class=${fieldClasses}>
+        ${this._renderPrefix()}
         <select
           id=${this._uid}
           name=${this.name}
@@ -909,15 +1066,14 @@ export class NxSelect extends LitElement {
           ${this.placeholder ? html`
             <option value="" disabled ?selected=${!this.value}>${this.placeholder}</option>
           ` : ''}
-          ${this.options.map(opt => html`
-            <option
-              value=${opt.value}
-              ?disabled=${opt.disabled}
-              ?selected=${opt.value === this.value}
-            >${opt.label}</option>
-          `)}
+          ${this.options.map(item => isGroup(item)
+            ? html`<optgroup label=${item.label}>
+                ${item.options.map(opt => this._renderNativeOption(opt))}
+              </optgroup>`
+            : this._renderNativeOption(item)
+          )}
         </select>
-        ${this._renderCaret()}
+        ${this._renderTrailing(false)}
       </div>
     `;
   }
@@ -942,8 +1098,6 @@ export class NxSelect extends LitElement {
       : this._isMaxed
         ? `Máximo de ${this.maxSelected} alcanzado`
         : `${filtered.length} ${filtered.length === 1 ? 'resultado' : 'resultados'}`;
-    const hasValue = this.multiple ? this.values.length > 0 : !!this.value;
-    const showClear = hasValue && !this.disabled;
     const isOptionSelected = (opt: NxSelectOption) =>
       this.multiple ? this.values.includes(opt.value) : this.value === opt.value;
 
@@ -957,6 +1111,7 @@ export class NxSelect extends LitElement {
     return html`
       <div class="combo-anchor">
         <div class=${fieldClasses}>
+          ${this._renderPrefix()}
           <div class="content">
             ${this.multiple && this.values.length > 0 ? html`
               <div class="chips">
@@ -1001,21 +1156,7 @@ export class NxSelect extends LitElement {
             @focus=${this._onComboFocus}
           />
           </div>
-          <div class="trailing">
-            ${showClear ? html`
-              <button
-                type="button"
-                class="clear-btn"
-                aria-label="Limpiar selección"
-                @click=${this._clear}
-              >
-                <svg viewBox="0 0 12 12" fill="none">
-                  <path d="M3 3L9 9M3 9L9 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-                </svg>
-              </button>
-            ` : ''}
-            ${this._renderCaret()}
-          </div>
+          ${this._renderTrailing(true)}
         </div>
 
         <div
@@ -1040,45 +1181,80 @@ export class NxSelect extends LitElement {
               >Limpiar</button>
             </div>
           ` : ''}
-          <ul
+          <div
             id=${listboxId}
             class=${`listbox${this.multiple ? ' is-multiple' : ''}`}
             role="listbox"
             aria-multiselectable=${this.multiple ? 'true' : nothing}
           >
             ${filtered.length === 0
-              ? html`<li class="empty"><slot name="empty">Sin resultados</slot></li>`
-              : filtered.map((opt, i) => {
-                  const selected = isOptionSelected(opt);
-                  // En multi, una opción no seleccionada queda bloqueada si se
-                  // alcanzó el tope. Las ya seleccionadas siguen quitándose.
-                  const blocked = !!opt.disabled || (!selected && this._isMaxed);
-                  return html`
-                    <li
-                      id=${optId(i)}
-                      role="option"
-                      aria-selected=${selected ? 'true' : 'false'}
-                      aria-disabled=${blocked ? 'true' : nothing}
-                      class=${i === this._activeIndex ? 'is-active' : ''}
-                      @click=${(e: Event) => { e.stopPropagation(); this._select(opt); }}
-                      @mouseenter=${() => { this._activeIndex = i; }}
-                    >
-                      ${this.multiple ? html`
-                        <span class="check" aria-hidden="true">
-                          <svg viewBox="0 0 14 14" fill="none">
-                            <path d="M2.5 7.5L6 11L11.5 3.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                          </svg>
-                        </span>
-                      ` : ''}
-                      <span class="opt-label">${opt.label}</span>
-                    </li>
-                  `;
-                })}
-          </ul>
+              ? html`<div class="empty"><slot name="empty">Sin resultados</slot></div>`
+              : this._renderListboxItems(isOptionSelected, optId)}
+          </div>
         </div>
       </div>
 
       <span class="sr-only" aria-live="polite">${counter}</span>
+    `;
+  }
+
+  /** Recorre `options` respetando grupos y filter, llevando un contador de
+      índice plano que coincide con `_filtered` (para teclado/aria). */
+  private _renderListboxItems(
+    isOptionSelected: (opt: NxSelectOption) => boolean,
+    optId: (i: number) => string,
+  ) {
+    let flatIndex = -1;
+    return this.options.map((item, groupIndex) => {
+      if (!isGroup(item)) {
+        if (!this._matchesQuery(item)) return nothing;
+        flatIndex += 1;
+        return this._renderOption(item, flatIndex, isOptionSelected, optId);
+      }
+      const matching = item.options.filter(o => this._matchesQuery(o));
+      if (matching.length === 0) return nothing;
+      const groupId = `${this._uid}-grp-${groupIndex}`;
+      return html`
+        <div role="group" aria-labelledby=${groupId}>
+          <div class="group-label" id=${groupId}>${item.label}</div>
+          ${matching.map(opt => {
+            flatIndex += 1;
+            return this._renderOption(opt, flatIndex, isOptionSelected, optId);
+          })}
+        </div>
+      `;
+    });
+  }
+
+  private _renderOption(
+    opt: NxSelectOption,
+    flatIndex: number,
+    isOptionSelected: (opt: NxSelectOption) => boolean,
+    optId: (i: number) => string,
+  ) {
+    const selected = isOptionSelected(opt);
+    // En multi, una opción no seleccionada queda bloqueada si se alcanzó el
+    // tope. Las ya seleccionadas siguen quitándose.
+    const blocked = !!opt.disabled || (!selected && this._isMaxed);
+    return html`
+      <div
+        id=${optId(flatIndex)}
+        role="option"
+        aria-selected=${selected ? 'true' : 'false'}
+        aria-disabled=${blocked ? 'true' : nothing}
+        class=${flatIndex === this._activeIndex ? 'is-active' : ''}
+        @click=${(e: Event) => { e.stopPropagation(); this._select(opt); }}
+        @mouseenter=${() => { this._activeIndex = flatIndex; }}
+      >
+        ${this.multiple ? html`
+          <span class="check" aria-hidden="true">
+            <svg viewBox="0 0 14 14" fill="none">
+              <path d="M2.5 7.5L6 11L11.5 3.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </span>
+        ` : ''}
+        <span class="opt-label">${opt.label}</span>
+      </div>
     `;
   }
 }

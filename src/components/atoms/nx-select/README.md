@@ -30,21 +30,29 @@ Select form-associated con doble path: `appearance: base-select` (Chrome 130+) y
   - `chip-limit="N"`: colapsa los chips sobrantes en un botón "+N más" / "Ver menos".
   - `max-selected="N"`: bloquea las opciones no seleccionadas al llegar al tope; el popup lo anuncia por la live region.
   - Checkmark en las opciones seleccionadas (en multi el fondo queda para el estado activo de teclado).
+- **Optgroups**: `options` acepta `NxSelectItem[]` — opciones sueltas y/o grupos `{ label, options: [] }` mezclados.
+  - Path nativo: `<optgroup>`.
+  - Combobox: cabeceras `role="group"` con `aria-labelledby`, sticky al hacer scroll (`scroll-padding-top` evita que tapen la opción activa al navegar con teclado).
+  - El filter descarta grupos sin coincidencias; los índices de teclado se aplanan, así que ↑/↓ saltan las cabeceras.
+- **Sizes** `sm | md | lg` (atributo `size`) — reescriben tokens internos de padding y tipografía; alineados con `nx-button` / `nx-input`.
+- **Slots `prefix` / `suffix`** para iconos decorativos, en ambos modos. `has-prefix` / `has-suffix` se reflejan desde el `slotchange`.
 - Theming brand-aware: `--nx-input-radius`, `--nx-input-bg`, `--nx-input-border`, `--nx-input-py`/`px`, `--nx-select-picker-radius`, `--nx-select-option-radius`.
 
 ## Roadmap — mejoras incrementales
 
-### v3 · Grupos y datos asíncronos
+### v3.1 · Datos asíncronos
 
-- Soporte de `<optgroup>` vía estructura de datos (`{ label, options: [] }`).
 - Async loading: prop `loadOptions` (callback) + estado `loading` con `nx-spinner`.
+- Estado de error de carga (vs. el `error` de validación actual).
+- Debounce del input antes de llamar a `loadOptions`.
+
+### v3.2 · Paginación + cache
+
 - Paginación / infinite scroll cuando el dataset no cabe en memoria.
 - Cache de resultados por query.
 
-### v4 · Polish
+### v4.1 · Aparcado (esperando caso real)
 
-- Sizes `sm | md | lg` (alineados con `nx-button` / `nx-input`).
-- Slots `prefix` / `suffix` para iconos (alineados con `nx-input`).
 - Modo tagging: crear entradas nuevas al teclear (con validación opcional).
 - Virtual scrolling para listas grandes (10k+ items) — sólo cuando justifique el coste.
 

@@ -11,6 +11,10 @@
 import './css/tokens.css';
 import './css/global.css';
 
+// Utilidades CSS compartidas — `CSSResult` para componer en `static styles`
+// de componentes propios. Ver doc en el fichero.
+export { utilities } from './css/utilities.ts';
+
 // ─── Atoms ─────────────────────────────────────────────────────────────────
 export { NxButton, type ButtonVariant, type ButtonSize } from './components/atoms/nx-button/nx-button.ts';
 export { NxInput, type InputType } from './components/atoms/nx-input/nx-input.ts';

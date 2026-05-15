@@ -1,5 +1,6 @@
 import { LitElement, html, css, nothing } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
+import { utilities } from '@/css/utilities.ts';
 import '@/components/atoms/nx-badge/nx-badge.js';
 
 /** Cada opción del select. `disabled` permite vetar entradas individuales. */
@@ -49,7 +50,7 @@ export class NxSelect extends LitElement {
   private readonly _internals = this.attachInternals();
   private readonly _uid = `nx-select-${++_counter}`;
 
-  static override styles = css`
+  static override styles = [utilities, css`
     :host {
       display: block;
       /* Tamaño 'md' por defecto. Los selectores :host([size=...]) sólo
@@ -303,10 +304,6 @@ export class NxSelect extends LitElement {
       min-width: 10rem;
     }
 
-    .chips {
-      display: contents;
-    }
-
     /* Botón × dentro de cada chip. Hereda color via currentColor del badge. */
     .chip-close {
       display: inline-flex;
@@ -508,19 +505,6 @@ export class NxSelect extends LitElement {
       outline-offset: 1px;
     }
 
-    /* Live region para SR — invisible pero presente en el árbol de a11y. */
-    .sr-only {
-      position: absolute;
-      width: 1px;
-      height: 1px;
-      padding: 0;
-      margin: -1px;
-      overflow: hidden;
-      clip: rect(0, 0, 0, 0);
-      white-space: nowrap;
-      border-width: 0;
-    }
-
     /* ─── Path moderno: appearance: base-select ────────────────────────────
        Sólo navegadores con soporte. Activa el popup totalmente custom y
        estiliza ::picker(select) con los mismos tokens. */
@@ -569,7 +553,7 @@ export class NxSelect extends LitElement {
         cursor: not-allowed;
       }
     }
-  `;
+  `];
 
   @property() name        = '';
   @property() value       = '';
@@ -1114,7 +1098,7 @@ export class NxSelect extends LitElement {
           ${this._renderPrefix()}
           <div class="content">
             ${this.multiple && this.values.length > 0 ? html`
-              <div class="chips">
+              <div class="u-contents">
                 ${visibleChips.map(v => this._renderChip(v))}
                 ${hiddenCount > 0 ? html`
                   <button
@@ -1194,7 +1178,7 @@ export class NxSelect extends LitElement {
         </div>
       </div>
 
-      <span class="sr-only" aria-live="polite">${counter}</span>
+      <span class="u-visually-hidden" aria-live="polite">${counter}</span>
     `;
   }
 
